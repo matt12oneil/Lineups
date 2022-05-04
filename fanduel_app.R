@@ -16,7 +16,7 @@
   
 pacman::p_load_current_gh("billpetti/baseballr")
 
-library(shiny)
+#library(shiny)
 library(glue)
 library(tidyverse)
 library(dplyr)
