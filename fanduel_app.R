@@ -12,6 +12,7 @@
   # L/R splits
   # clean up code and mark it up
   # lineup optimizer, function based on amount of salary left over and how many total teams we want to pull from
+  # ggplot three different pages, one on xBA, one on xSlg, and one on xWOBA to rank players
   
 pacman::p_load_current_gh("billpetti/baseballr")
 
@@ -350,6 +351,7 @@ xstats_pitchers <- statcast_leaderboards(
 # take the average to start getting the index
 avg_x_woba <- mean(xstats_batters$est_woba)
 avg_x_slg <- mean(xstats_batters$est_slg)
+avg_x_ba <- mean(xstats_batters$est_ba)
 
 
 # dfs_2021 <- read_excel(path = '/Users/mattoneil/Documents/MO/Lineups App/MLB-2021-DFS-Dataset.xlsx') %>%
@@ -359,22 +361,22 @@ updated_batters <- updated %>%
   distinct(player = batter) %>%
   left_join(rosters, by = c('player' = 'player')) %>%
   inner_join(xstats_batters, by = c('player' = 'player_id')) %>%
-  select(player, slg, est_slg, woba, est_woba) %>%
-  mutate(xslg_index = est_slg/avg_x_slg, xwoba_index = est_woba/avg_x_woba) %>%
+  select(player, slg, est_slg, woba, est_woba, ba, est_ba) %>%
+  mutate(xslg_index = est_slg/avg_x_slg, xwoba_index = est_woba/avg_x_woba, xba_index = est_ba/avg_x_ba) %>%
   mutate(type = 'batter')
 
 updated_pitchers <- updated %>%
   distinct(player = pitcher)  %>%
   left_join(rosters, by = c('player' = 'player')) %>%
   inner_join(xstats_pitchers, by = c('player' = 'player_id')) %>%
-  select(player, slg, est_slg, woba, est_woba) %>%
-  mutate(xslg_index = est_slg/avg_x_slg, xwoba_index = est_woba/avg_x_woba) %>%
+  select(player, slg, est_slg, woba, est_woba, ba, est_ba) %>%
+  mutate(xslg_index = est_slg/avg_x_slg, xwoba_index = est_woba/avg_x_woba, xba_index = est_ba/avg_x_ba) %>%
   mutate(type = 'pitcher')
 
 updated_players <- updated_batters %>%
   bind_rows(updated_pitchers) %>%
   inner_join(rosters, by = c('player' = 'player')) %>%
-  select(-c(slg, est_slg, woba, est_woba))
+  select(-c(slg, est_slg, woba, est_woba, ba, est_ba))
 
 #all players that played in 2021
 players_2021 <- data.table(get_chadwick_lu()) %>%
@@ -401,7 +403,7 @@ pitchers <- read_csv('/Users/mattoneil/Documents/MO/Lineups/fdsalary.csv') %>%
   select(pitcher_id = player, pitcher_name = nickname, pitcher_team = team, pitcher_salary = salary) %>%
   inner_join(updated_players, by = c('pitcher_id' = 'player', 'pitcher_team' = 'player_team')) %>%
   filter(type == 'pitcher') %>%
-  mutate(pitcher_xslg_index = xslg_index, pitcher_xwoba_index = xwoba_index) %>%
+  mutate(pitcher_xslg_index = xslg_index, pitcher_xwoba_index = xwoba_index, pitcher_xba_index = xba_index) %>%
   select(-c(xslg_index, xwoba_index)) %>%
   distinct()
 
@@ -507,7 +509,7 @@ batter_index <- batter_statcast %>%
   ) %>%
   ungroup() %>%
   inner_join(updated_batters, by = c('player')) %>%
-  select(-c(slg, est_slg, woba, est_woba)) %>%
+  select(-c(slg, est_slg, woba, est_woba, ba, est_ba)) %>%
   arrange(desc(home_run_index)) %>%
   mutate_if(is.numeric, round, 2)
 
@@ -596,7 +598,7 @@ pitcher_index <- pitcher_statcast %>%
   ) %>%
   ungroup() %>%
   inner_join(updated_pitchers, by = c('player')) %>%
-  select(-c(slg, est_slg, woba, est_woba)) %>%
+  select(-c(slg, est_slg, woba, est_woba, ba, est_ba)) %>%
   arrange(desc(SO_index)) %>%
   mutate_if(is.numeric, round, 2)
 
@@ -607,13 +609,13 @@ indexes <- batter_index %>%
 matchup <- function(batter_mlb_id, pitcher_mlb_id) {
 
    # batter_mlb_id = 592450
-   # pitcher_mlb_id = 548389
+   # pitcher_mlb_id = 579328
   
   batter <- players %>%
     filter(key_mlbam == batter_mlb_id & (position != 'P' | nickname == 'Shohei Ohtani')) %>%
     select(key_mlbam, team, opponent, batter_name = nickname, position, salary, single, double, triple, hr, so, UIBB) %>%
     inner_join(updated_batters, by = c('key_mlbam' = 'player')) %>%
-    select(-c(slg,est_slg,woba, est_woba))
+    select(-c(slg,est_slg,woba, est_woba, ba, est_ba))
   
   
   pitcher <- pitchers %>%
@@ -636,6 +638,7 @@ matchup <- function(batter_mlb_id, pitcher_mlb_id) {
   field_outs_percent <- total_percents$field_outs_total_percent * pitcher_stats$field_outs_index * batter_stats$field_outs_index
   total_x_slg <- pitcher_stats$xslg_index * batter$xslg_index
   total_x_woba <- pitcher_stats$xwoba_index * batter$xwoba_index
+  total_x_ba <- pitcher_stats$xba_index * batter$xba_index
   
   matchup_percentages <- cbind(SO_percent) %>%
     bind_cols(BB_percent = BB_percent,single_percent = single_percent,double_percent = double_percent,triple_percent = triple_percent,home_run_percent= home_run_percent,field_outs_percent = field_outs_percent) %>%
@@ -652,7 +655,7 @@ matchup <- function(batter_mlb_id, pitcher_mlb_id) {
     bind_cols(pitcher_name = pitcher_name) %>%
     mutate(Price = dollar(as.numeric(salary))) %>%
     select(Batter = batter_name, team, Position = position, Opponent = opponent, Price, Pitcher = pitcher_name, SO, BB, single, double, triple, home_run, field_out, on_base ,weighted, salary) %>%
-    bind_cols(xSlg = total_x_slg, xWOBA = total_x_woba) %>%
+    bind_cols(xSlg = total_x_slg, xWOBA = total_x_woba, xBA = total_x_ba) %>%
     distinct()
   
   print(batter$batter_name)
@@ -740,7 +743,7 @@ all_players <- function() {
     arrange(Rank) %>%
     inner_join(pitcher_info, by = c('Pitcher' = 'pitcher_name')) %>%
     mutate(Value = round((salary/1000)/xWOBA,2)) %>%
-    select(Batter, Team = team, Position, Price, Pitcher, Opponent, SO, BB, Single = single, Double = double, Triple = triple, `Home Run` = home_run, Weighted =  weighted, `On Base` = on_base, xSlg, xWOBA, Value, Rank)
+    select(Batter, Team = team, Position, Price, Pitcher, Opponent, SO, BB, Single = single, Double = double, Triple = triple, `Home Run` = home_run, Weighted =  weighted, `On Base` = on_base,xBA, xSlg, xWOBA, Value, Rank)
   
   return(batter_matchups)
 }
@@ -753,7 +756,7 @@ pitcher_stats <- function(game_date) {
   pitcher_aggs <- whole_day_stats  %>%
     mutate(on_base = (100 - SO - field_out)) %>%
     group_by(Pitcher) %>%
-    dplyr::summarize(SO = mean(SO), BB = mean(BB), single = mean(single), double = mean(double), triple = mean(triple), home_run = mean(home_run), field_out = mean(field_out), on_base = mean(on_base), weighted = mean(weighted), xWOBA = mean(xWOBA), xSlg = mean(xSlg)) %>%
+    dplyr::summarize(SO = mean(SO), BB = mean(BB), single = mean(single), double = mean(double), triple = mean(triple), home_run = mean(home_run), field_out = mean(field_out), on_base = mean(on_base), weighted = mean(weighted), xBA = mean(xBA), xWOBA = mean(xWOBA), xSlg = mean(xSlg)) %>%
     arrange(on_base) %>%
     ungroup() %>%
     mutate(Rank = rank(rank(xSlg) + rank(xWOBA) + rank(desc(SO)))) %>%
@@ -803,33 +806,32 @@ positions <- function(position_choice = c('C','1B','2B','3B','SS','OF'), differe
 }
 
 
-positions_reactive <- function(position_choice = c('C','1B','2B','3B','SS','OF'), difference = 20) {
-  
-  # put a table next to it or something so we have both
-  
-  position_players <- reactive(whole_day_stats %>%
-    filter(grepl(paste(position_choice,collapse="|"), Position)) %>%
-    mutate(on_base = 100 - SO - field_out) %>%
-    mutate_if(is.numeric, round, 2) %>%
-    mutate(salary_rank = round(rank(desc(salary)),0)) %>%
-    mutate(xWOBA_rank = round(rank(desc(xWOBA)),0)) %>%
-    mutate(dollar_per_woba = round((salary/1000)/xWOBA,2)) %>%
-    mutate(fd_difference = salary_rank - xWOBA_rank) %>%
-    mutate(difference_rank = rank(xWOBA_rank - salary_rank)) %>%
-    mutate(value_rank = rank(dollar_per_woba)) %>%
-    mutate(number = rank(difference_rank)))
-  
-  label_rows <- reactive(position_players %>%
-    filter(rank(value_rank) <= difference | rank(desc(value_rank)) <= difference))
-  
-  rank_salary <- ggplot(position_players, aes(x = xWOBA_rank, y = salary_rank)) + geom_point() + geom_text_repel(data = label_rows, aes(label = glue('{Batter}: {dollar_per_woba}'))) + scale_x_reverse() + scale_y_reverse() + labs(title = glue('{position_choice} Breakdown'), subtitle = glue('Top and Bottom {difference} Values are Labeled'), caption = 'Data taken from baseballr package, Chart made by @matt12oneil')
-  
-  
-  
-  return(rank_salary)
-}
+# positions_reactive <- function(position_choice = c('C','1B','2B','3B','SS','OF'), difference = 20) {
+#   
+#   # put a table next to it or something so we have both
+#   
+#   position_players <- reactive(whole_day_stats %>%
+#     filter(grepl(paste(position_choice,collapse="|"), Position)) %>%
+#     mutate(on_base = 100 - SO - field_out) %>%
+#     mutate_if(is.numeric, round, 2) %>%
+#     mutate(salary_rank = round(rank(desc(salary)),0)) %>%
+#     mutate(xWOBA_rank = round(rank(desc(xWOBA)),0)) %>%
+#     mutate(dollar_per_woba = round((salary/1000)/xWOBA,2)) %>%
+#     mutate(fd_difference = salary_rank - xWOBA_rank) %>%
+#     mutate(difference_rank = rank(xWOBA_rank - salary_rank)) %>%
+#     mutate(value_rank = rank(dollar_per_woba)) %>%
+#     mutate(number = rank(difference_rank)))
+#   
+#   label_rows <- reactive(position_players %>%
+#     filter(rank(value_rank) <= difference | rank(desc(value_rank)) <= difference))
+#   
+#   rank_salary <- ggplot(position_players, aes(x = xWOBA_rank, y = salary_rank)) + geom_point() + geom_text_repel(data = label_rows, aes(label = glue('{Batter}: {dollar_per_woba}'))) + scale_x_reverse() + scale_y_reverse() + labs(title = glue('{position_choice} Breakdown'), subtitle = glue('Top and Bottom {difference} Values are Labeled'), caption = 'Data taken from baseballr package, Chart made by @matt12oneil')
+#   
+#   
+#   
+#   return(rank_salary)
+# }
 
-positions <- c('C','1B','2B','3B','SS','OF')
 
 positions_table <- function(position_choice = c('C','1B','2B','3B','SS','OF'), difference = 25) {
   
