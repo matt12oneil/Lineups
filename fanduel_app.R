@@ -14,16 +14,16 @@
   # lineup optimizer, function based on amount of salary left over and how many total teams we want to pull from
   # ggplot three different pages, one on xBA, one on xSlg, and one on xWOBA to rank players
   
-pacman::p_load_current_gh("billpetti/baseballr")
+#pacman::p_load_current_gh("billpetti/baseballr")
 
-#library(shiny)
+library(shiny)
 library(glue)
 library(tidyverse)
 library(dplyr)
 library(formattable)
 library(gtExtras)
 library(rsconnect)
-#library(baseballr)
+library(baseballr)
 library(retrosheet)
 library(gt)
 library(stringr)
@@ -54,7 +54,7 @@ valid_events <- c("single","double","triple","home_run","walk","strikeout","fiel
 teams <- mlb_teams(season = 2022, sport_ids = c(1)) %>%
   select(team_id, team_full_name, team_abbreviation)
 
-history <- read_csv('https://github.com/matt12oneil/Lineups/blob/master/fdhistory.csv') %>%
+history <- read_csv('https://raw.githubusercontent.com/matt12oneil/Lineups/master/fdhistory.csv') %>%
   janitor::clean_names() %>%
   filter(sport == 'mlb' & salary_cap == '$35k' & (!str_detect(link, 'voided') & !str_detect(link, 'endedunmatched')) & date >= '2022-01-01') %>%
   mutate(winnings = as.numeric(winnings), score = as.numeric(score)) %>%
@@ -383,7 +383,7 @@ players_2021 <- data.table(get_chadwick_lu()) %>%
   filter(is.na(key_mlbam) == F & (mlb_played_last == 2022 | mlb_played_last == 2021)) %>%
   mutate(full_name = paste(name_first, name_last))
 
-salary <- read_csv('https://github.com/matt12oneil/Lineups/blob/master/fdsalary.csv') %>%
+salary <- read_csv('https://raw.githubusercontent.com/matt12oneil/Lineups/master/fdsalary.csv') %>%
   janitor::clean_names() %>%
   filter(is.na(injury_indicator)) %>%
   mutate(nickname = ifelse(nickname == 'Kike Hernandez' & team == 'BOS','Kiké Hernandez', nickname)) %>%
@@ -396,7 +396,7 @@ salary <- read_csv('https://github.com/matt12oneil/Lineups/blob/master/fdsalary.
   inner_join(park_factors, by = c('home'='team_abbreviation'))
 
 
-pitchers <- read_csv('https://github.com/matt12oneil/Lineups/blob/master/fdsalary.csv') %>%
+pitchers <- read_csv('https://raw.githubusercontent.com/matt12oneil/Lineups/master/fdsalary.csv') %>%
   janitor::clean_names() %>%
   filter(probable_pitcher == 'Yes') %>%
   inner_join(rosters, by = c('nickname' = 'player_name')) %>%
