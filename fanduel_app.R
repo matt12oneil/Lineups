@@ -307,8 +307,8 @@ updated <- annual_statcast_query(season) %>%
 xstats_batters <- statcast_leaderboards(
   leaderboard = "expected_statistics",
   year = 2022,
-  abs = 20,
-  min_pa = "q",
+  abs = 10,
+  min_pa = 25,
   min_pitches = 20,
   min_field = "q",
   min_run = 0,
@@ -329,9 +329,53 @@ xstats_batters <- statcast_leaderboards(
 xstats_pitchers <- statcast_leaderboards(
   leaderboard = "expected_statistics",
   year = 2022,
-  abs = 20,
-  min_pa = "q",
+  abs = 10,
+  min_pa = 25,
   min_pitches = 20,
+  min_field = "q",
+  min_run = 0,
+  player_type = "pitcher",
+  fielding_type = "player",
+  oaa_position = "",
+  oaa_roles = "",
+  team = "",
+  arsenal_type = "n_",
+  run_type = "raw",
+  min2b = 0,
+  min3b = 0,
+  position = "",
+  bats = "",
+  hand = ""
+)
+
+ev_batters <- statcast_leaderboards(
+  leaderboard = "exit_velocity_barrels",
+  year = 2022,
+  abs = 10,
+  min_pa = 25,
+  min_pitches = 20,
+  min_field = "q",
+  min_run = 0,
+  player_type = "batter",
+  fielding_type = "player",
+  oaa_position = "",
+  oaa_roles = "",
+  team = "",
+  arsenal_type = "n_",
+  run_type = "raw",
+  min2b = 0,
+  min3b = 0,
+  position = "",
+  bats = "",
+  hand = ""
+)
+
+ev_pitchers <- statcast_leaderboards(
+  leaderboard = "exit_velocity_barrels",
+  year = 2022,
+  abs = 10,
+  min_pa = 25,
+  min_pitches = 5,
   min_field = "q",
   min_run = 0,
   player_type = "pitcher",
@@ -353,6 +397,13 @@ avg_x_woba <- mean(xstats_batters$est_woba)
 avg_x_slg <- mean(xstats_batters$est_slg)
 avg_x_ba <- mean(xstats_batters$est_ba)
 
+avg_brl_pa <- mean(ev_batters$brl_pa)
+avg_barrel_pct <- mean(ev_batters$brl_percent)
+avg_hard_hit_pct <- mean(ev_batters$ev95percent)
+avg_max_hit_ev <- mean(ev_batters$max_hit_speed)
+avg_mean_ev <- mean(ev_batters$avg_hit_speed)
+avg_sweet_spot_pct <- mean(ev_batters$anglesweetspotpercent)
+
 
 # dfs_2021 <- read_excel(path = '/Users/mattoneil/Documents/MO/Lineups App/MLB-2021-DFS-Dataset.xlsx') %>%
 #   distinct(player_id, player_name)
@@ -363,6 +414,8 @@ updated_batters <- updated %>%
   inner_join(xstats_batters, by = c('player' = 'player_id')) %>%
   select(player, slg, est_slg, woba, est_woba, ba, est_ba) %>%
   mutate(xslg_index = est_slg/avg_x_slg, xwoba_index = est_woba/avg_x_woba, xba_index = est_ba/avg_x_ba) %>%
+  inner_join(ev_batters, by = c('player' = 'player_id')) %>%
+  mutate(brl_pa_index = brl_pa/avg_brl_pa, brl_pct_index = brl_percent/avg_barrel_pct, hard_hit_index = ev95percent/avg_hard_hit_pct, max_ev_index = max_hit_speed/avg_max_hit_ev, mean_ev_index = avg_hit_speed/avg_mean_ev, sweet_spot_index = anglesweetspotpercent/avg_sweet_spot_pct) %>%
   mutate(type = 'batter')
 
 updated_pitchers <- updated %>%
@@ -371,12 +424,14 @@ updated_pitchers <- updated %>%
   inner_join(xstats_pitchers, by = c('player' = 'player_id')) %>%
   select(player, slg, est_slg, woba, est_woba, ba, est_ba) %>%
   mutate(xslg_index = est_slg/avg_x_slg, xwoba_index = est_woba/avg_x_woba, xba_index = est_ba/avg_x_ba) %>%
+  inner_join(ev_pitchers, by = c('player' = 'player_id')) %>%
+  mutate(brl_pa_index = brl_pa/avg_brl_pa, brl_pct_index = brl_percent/avg_barrel_pct, hard_hit_index = ev95percent/avg_hard_hit_pct, max_ev_index = max_hit_speed/avg_max_hit_ev, mean_ev_index = avg_hit_speed/avg_mean_ev, sweet_spot_index = anglesweetspotpercent/avg_sweet_spot_pct) %>%
   mutate(type = 'pitcher')
 
 updated_players <- updated_batters %>%
   bind_rows(updated_pitchers) %>%
   inner_join(rosters, by = c('player' = 'player')) %>%
-  select(-c(slg, est_slg, woba, est_woba, ba, est_ba))
+  select(-c(slg, est_slg, woba, est_woba, ba, est_ba, avg_hit_angle, anglesweetspotpercent,max_hit_speed,avg_hit_speed, fbld, gb, max_distance, avg_distance, avg_hr_distance, ev95plus, `ev95per-swing`, ev95percent,barrels,brl_percent,brl_pa))
 
 #all players that played in 2021
 players_2021 <- data.table(get_chadwick_lu()) %>%
@@ -403,7 +458,7 @@ pitchers <- read_csv('https://raw.githubusercontent.com/matt12oneil/Lineups/mast
   select(pitcher_id = player, pitcher_name = nickname, pitcher_team = team, pitcher_salary = salary) %>%
   inner_join(updated_players, by = c('pitcher_id' = 'player', 'pitcher_team' = 'player_team')) %>%
   filter(type == 'pitcher') %>%
-  mutate(pitcher_xslg_index = xslg_index, pitcher_xwoba_index = xwoba_index, pitcher_xba_index = xba_index) %>%
+  mutate(pitcher_xslg_index = xslg_index, pitcher_xwoba_index = xwoba_index, pitcher_xba_index = xba_index, pitcher_barrel_pa_index = brl_pa_index, pitcher_barrel_pct_index = brl_pct_index, pitcher_hard_hit_index = hard_hit_index, pitcher_max_ev_index = max_ev_index, pitcher_mean_ev_index = mean_ev_index, pitcher_sweet_spot_index = sweet_spot_index) %>%
   select(-c(xslg_index, xwoba_index)) %>%
   distinct()
 
@@ -639,6 +694,12 @@ matchup <- function(batter_mlb_id, pitcher_mlb_id) {
   total_x_slg <- pitcher_stats$xslg_index * batter$xslg_index
   total_x_woba <- pitcher_stats$xwoba_index * batter$xwoba_index
   total_x_ba <- pitcher_stats$xba_index * batter$xba_index
+  total_brl_pa_index <- pitcher_stats$brl_pa_index * batter_stats$brl_pa_index
+  total_brl_pct_index <- pitcher_stats$brl_pct_index * batter_stats$brl_pct_index
+  total_hard_hit_index <- pitcher_stats$hard_hit_index * batter_stats$hard_hit_index
+  total_max_ev_index <- pitcher_stats$max_ev_index * batter_stats$max_ev_index
+  total_mean_ev_index <- pitcher_stats$mean_ev_index * batter_stats$mean_ev_index
+  total_sweet_spot_index <- pitcher_stats$sweet_spot_index * batter_stats$sweet_spot_index
   
   matchup_percentages <- cbind(SO_percent) %>%
     bind_cols(BB_percent = BB_percent,single_percent = single_percent,double_percent = double_percent,triple_percent = triple_percent,home_run_percent= home_run_percent,field_outs_percent = field_outs_percent) %>%
@@ -655,7 +716,7 @@ matchup <- function(batter_mlb_id, pitcher_mlb_id) {
     bind_cols(pitcher_name = pitcher_name) %>%
     mutate(Price = dollar(as.numeric(salary))) %>%
     select(Batter = batter_name, team, Position = position, Opponent = opponent, Price, Pitcher = pitcher_name, SO, BB, single, double, triple, home_run, field_out, on_base ,weighted, salary) %>%
-    bind_cols(xSlg = total_x_slg, xWOBA = total_x_woba, xBA = total_x_ba) %>%
+    bind_cols(brl_pa = total_brl_pa_index, brl_pct = total_brl_pct_index, hard_hit = total_hard_hit_index, max_ev = total_max_ev_index, mean_ev = total_mean_ev_index, sweet_spot = total_sweet_spot_index, xSlg = total_x_slg, xWOBA = total_x_woba, xBA = total_x_ba) %>%
     distinct()
   
   print(batter$batter_name)
@@ -717,11 +778,11 @@ lineup_stats <- function(team_name){
   
   
   all_matchups <- order %>%
-    select(Batter, team, Price, Pitcher, SO, double, home_run, weighted, on_base, xSlg, xWOBA) %>%
+    select(Batter, team, Price, Pitcher, brl_pa, brl_pct, hard_hit, max_ev, mean_ev, sweet_spot, xSlg, xWOBA) %>%
     mutate(xSlg = round(xSlg,2), xWOBA = round(xWOBA,2)) %>%
     gt() %>%
     gt_merge_stack(col1 = Batter, Pitcher) %>%
-    gt_color_rows(SO:xWOBA, palette = "grDevices::blues9") %>%
+    gt_color_rows(brl_pa:xWOBA, palette = "grDevices::blues9") %>%
     tab_header(title = glue('{team_name} Lineup Projections vs. {opposing_team$Opponent} for {date_of_game}')) %>%
     tab_options(table.width = 12)
   
@@ -743,7 +804,7 @@ all_players <- function() {
     arrange(Rank) %>%
     inner_join(pitcher_info, by = c('Pitcher' = 'pitcher_name')) %>%
     mutate(Value = round((salary/1000)/xWOBA,2)) %>%
-    select(Batter, Team = team, Position, Price, Pitcher, Opponent, SO, BB, Single = single, Double = double, Triple = triple, `Home Run` = home_run, Weighted =  weighted, `On Base` = on_base,xBA, xSlg, xWOBA, Value, Rank)
+    select(Batter, Team = team, Position, Price, Pitcher, Opponent, brl_pa, brl_pct, hard_hit, max_ev, mean_ev, sweet_spot, xBA, xSlg, xWOBA, Value, Rank)
   
   return(batter_matchups)
 }
@@ -756,17 +817,16 @@ pitcher_stats <- function(game_date) {
   pitcher_aggs <- whole_day_stats  %>%
     mutate(on_base = (100 - SO - field_out)) %>%
     group_by(Pitcher) %>%
-    dplyr::summarize(SO = mean(SO), BB = mean(BB), single = mean(single), double = mean(double), triple = mean(triple), home_run = mean(home_run), field_out = mean(field_out), on_base = mean(on_base), weighted = mean(weighted), xBA = mean(xBA), xWOBA = mean(xWOBA), xSlg = mean(xSlg)) %>%
-    arrange(on_base) %>%
+    dplyr::summarize(SO = mean(SO), brl_pa = mean(brl_pa), brl_pct = mean(brl_pct), hard_hit = mean(hard_hit), max_ev = mean(max_ev), mean_ev = mean(mean_ev), sweet_spot = mean(sweet_spot), xBA = mean(xBA), xWOBA = mean(xWOBA), xSlg = mean(xSlg)) %>%
     ungroup() %>%
     mutate(Rank = rank(rank(xSlg) + rank(xWOBA) + rank(desc(SO)))) %>%
     mutate_if(is.numeric, round, 2) %>%
     arrange(xWOBA) %>%
-    select(Pitcher, SO, on_base, weighted, xSlg, xWOBA, Rank) %>%
+    select(Pitcher, SO, brl_pa, brl_pct, hard_hit, max_ev, mean_ev, sweet_spot, weighted, xSlg, xWOBA, Rank) %>%
     inner_join(pitchers, by = c('Pitcher' = 'pitcher_name')) %>%
     mutate(Price = dollar(as.numeric(pitcher_salary))) %>%
     mutate(Value = round((pitcher_salary/1000)/xWOBA,2)) %>%
-    select(Pitcher, Price, Team = pitcher_team, SO, `On Base` = on_base, Weighted = weighted, xSlg,  xWOBA, Value, Rank) %>%
+    select(Pitcher, Price, Team = pitcher_team, SO, brl_pa, brl_pct, hard_hit, max_ev, mean_ev, sweet_spot, weighted, xSlg, xWOBA, Rank) %>%
     mutate(Rank = round(Rank,0)) %>%
     gt() %>%
     gt_color_rows(SO:Rank, palette = "RColorBrewer::Reds") %>%
