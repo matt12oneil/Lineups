@@ -767,10 +767,6 @@ lineup_stats <- function(team_name){
   order <- whole_day_stats %>%
     filter(team == team_name) 
   
-  # %>%
-  #   arrange(batting_order) %>%
-  #   inner_join(batter_index, by = c("key_mlbam" = "player"))
-  
   
   new_lineups <- order %>%
     split(1:nrow(.)) %>%
@@ -779,7 +775,7 @@ lineup_stats <- function(team_name){
   
   all_matchups <- order %>%
     select(Batter, team, Price, Pitcher, brl_pa, brl_pct, hard_hit, max_ev, mean_ev, sweet_spot, xSlg, xWOBA) %>%
-    mutate(xSlg = round(xSlg,2), xWOBA = round(xWOBA,2)) %>%
+    mutate_if(is.numeric,round,2) %>%
     gt() %>%
     gt_merge_stack(col1 = Batter, Pitcher) %>%
     gt_color_rows(brl_pa:xWOBA, palette = "grDevices::blues9") %>%
