@@ -818,11 +818,11 @@ pitcher_stats <- function(game_date) {
     mutate(Rank = rank(rank(xSlg) + rank(xWOBA) + rank(desc(SO)))) %>%
     mutate_if(is.numeric, round, 2) %>%
     arrange(xWOBA) %>%
-    select(Pitcher, SO, brl_pa, brl_pct, hard_hit, max_ev, mean_ev, sweet_spot, weighted, xSlg, xWOBA, Rank) %>%
+    select(Pitcher, SO, brl_pa, brl_pct, hard_hit, max_ev, mean_ev, sweet_spot, xSlg, xWOBA, Rank) %>%
     inner_join(pitchers, by = c('Pitcher' = 'pitcher_name')) %>%
     mutate(Price = dollar(as.numeric(pitcher_salary))) %>%
     mutate(Value = round((pitcher_salary/1000)/xWOBA,2)) %>%
-    select(Pitcher, Price, Team = pitcher_team, SO, brl_pa, brl_pct, hard_hit, max_ev, mean_ev, sweet_spot, weighted, xSlg, xWOBA, Rank) %>%
+    select(Pitcher, Price, Team = pitcher_team, SO, brl_pa, brl_pct, hard_hit, max_ev, mean_ev, sweet_spot, xSlg, xWOBA, Rank) %>%
     mutate(Rank = round(Rank,0)) %>%
     gt() %>%
     gt_color_rows(SO:Rank, palette = "RColorBrewer::Reds") %>%
