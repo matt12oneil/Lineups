@@ -831,6 +831,10 @@ pitcher_stats <- function(game_date) {
   return(pitcher_aggs)
 }
 
+raw_batters <- batter_index %>%
+  select(Player = player_name, brl_pa_index, brl_pct_index,hard_hit_index, max_ev_index,mean_ev_index, sweet_spot_index, xba_index,xslg_index, xwoba_index) %>%
+  arrange(desc(brl_pa_index))
+
 
 
 positions_list <- c('','C','1B','2B','3B','SS','OF')
@@ -919,7 +923,6 @@ optimizer <- function(salary_left, max_teams = 4) {
   salary_left = 10000
   
   proj <- whole_day_stats %>%
-    #filter(Batter == 'Taylor Walls' | Batter == 'Abraham Toro' | Batter == 'Austin Riley') %>%
     separate_rows(Position,sep = '/') %>%
     mutate(c_1b = str_detect(Position, 'C') | str_detect(Position, '1B')) %>%
     mutate(second = str_detect(Position, '2B')) %>%
@@ -983,6 +986,9 @@ ui = fluidPage(
                                       label = 'Select a Team'
       ),
       gt_output(outputId = "team1")),
+      tabPanel('Batter Index',
+               DT::dataTableOutput("batter_index"
+               )), 
       tabPanel('Fanduel Batters',
                DT::dataTableOutput("all_data"
                                    )), 
@@ -1041,6 +1047,9 @@ ui = fluidPage(
 server <- function(input, output) {
   output$team1 <- render_gt(
   lineup_stats(input$team1)
+  )
+  output$batter_index <- DT::renderDataTable(
+    raw_batters, options = list(pageLength = 35)
   )
   output$all_data <- DT::renderDataTable(
     all_players(), options = list(pageLength = 35)
