@@ -307,7 +307,7 @@ updated <- annual_statcast_query(season) %>%
 xstats_batters <- statcast_leaderboards(
   leaderboard = "expected_statistics",
   year = 2022,
-  abs = 10,
+  abs = 25,
   min_pa = 25,
   min_pitches = 20,
   min_field = "q",
@@ -329,7 +329,7 @@ xstats_batters <- statcast_leaderboards(
 xstats_pitchers <- statcast_leaderboards(
   leaderboard = "expected_statistics",
   year = 2022,
-  abs = 10,
+  abs = 25,
   min_pa = 25,
   min_pitches = 20,
   min_field = "q",
@@ -351,7 +351,7 @@ xstats_pitchers <- statcast_leaderboards(
 ev_batters <- statcast_leaderboards(
   leaderboard = "exit_velocity_barrels",
   year = 2022,
-  abs = 10,
+  abs = 25,
   min_pa = 25,
   min_pitches = 20,
   min_field = "q",
@@ -373,7 +373,7 @@ ev_batters <- statcast_leaderboards(
 ev_pitchers <- statcast_leaderboards(
   leaderboard = "exit_velocity_barrels",
   year = 2022,
-  abs = 10,
+  abs = 25,
   min_pa = 25,
   min_pitches = 5,
   min_field = "q",
