@@ -54,77 +54,77 @@ valid_events <- c("single","double","triple","home_run","walk","strikeout","fiel
 teams <- mlb_teams(season = 2022, sport_ids = c(1)) %>%
   select(team_id, team_full_name, team_abbreviation)
 
-history <- read_csv('https://raw.githubusercontent.com/matt12oneil/Lineups/master/fdhistory.csv') %>%
-  janitor::clean_names() %>%
-  filter(sport == 'mlb' & salary_cap == '$35k' & (!str_detect(link, 'voided') & !str_detect(link, 'endedunmatched')) & date >= '2022-01-01') %>%
-  mutate(winnings = as.numeric(winnings), score = as.numeric(score)) %>%
-  group_by(date,score) %>%
-  summarize(total_entries = sum(entry), winnings = as.double(sum(winnings))) %>%
-  arrange(desc(score))
-
-clean_totals <- function(url) {
-  
-  url <- 'https://sportsdata.usatoday.com/baseball/mlb/odds'
-  
-  WS <- read_html(url) %>%
-    html_nodes(xpath = '//*[@id="__next"]/div[5]/div[3]/div/div[1]/div[2]/div[2]') %>%
-    html_table()
-  
-  lines <- WS[[1]] %>%
-    janitor::clean_names() %>%
-    `colnames<-` (c('team','spread','money_line','total','garbage')) %>%
-    filter(spread != 'Spread') %>%
-    select(-c(garbage, spread)) %>%
-    mutate(money_line = as.numeric(money_line)) %>%
-    mutate(team = case_when(str_detect(team, 'Angels') ~ 'LAA',
-                            str_detect(team, 'Astros') ~ 'HOU',
-                            str_detect(team, 'Rangers') ~ 'TEX',
-                            str_detect(team, 'Mariners') ~ 'SEA',
-                            str_detect(team, 'Athletics') ~ 'OAK',
-                            str_detect(team, 'Dodgers') ~ 'LAD',
-                            str_detect(team, 'Padres') ~ 'SD',
-                            str_detect(team, 'Giants') ~ 'SF',
-                            str_detect(team, 'Rockies') ~ 'COL',
-                            str_detect(team, 'Diamondbacks') ~ 'ARI',
-                            str_detect(team, 'Guardians') ~ 'CLE',
-                            str_detect(team, 'Twins') ~ 'MIN',
-                            str_detect(team, 'White Sox') ~ 'CWS',
-                            str_detect(team, 'Tigers') ~ 'DET',
-                            str_detect(team, 'Royals') ~ 'KC',
-                            str_detect(team, 'Cubs') ~ 'CHC',
-                            str_detect(team, 'Pirates') ~ 'PIT',
-                            str_detect(team, 'Reds') ~ 'CIN',
-                            str_detect(team, 'Brewers') ~ 'MIL',
-                            str_detect(team, 'Cardinals') ~ 'STL',
-                            str_detect(team, 'Red Sox') ~ 'BOS',
-                            str_detect(team, 'Yankees') ~ 'NYY',
-                            str_detect(team, 'Rays') ~ 'TB',
-                            str_detect(team, 'Blue Jays') ~ 'TOR',
-                            str_detect(team, 'Orioles') ~ 'BAL',
-                            str_detect(team, 'Mets') ~ 'NYM',
-                            str_detect(team, 'Nationals') ~ 'WSH',
-                            str_detect(team, 'Phillies') ~ 'PHI',
-                            str_detect(team, 'Marlins') ~ 'MIA',
-                            str_detect(team, 'Braves') ~ 'ATL',
-                            TRUE ~ 'None'
-    )) %>%
-    mutate(implied_share = case_when(money_line < 0 ~ round((money_line/(money_line-100)),2),
-                                     TRUE ~ round((100/(money_line + 100)),2))) %>%
-    separate(total, into = c('garbage','total'), sep = ' ') %>%
-    select(-garbage) %>%
-    mutate(total = as.numeric(substr(total,1,3))) %>%
-    mutate(implied_total = round((implied_share*total),2))
-  
-  sd_total <- sd(lines$implied_total)
-  avg_total <- mean(lines$implied_total)
-  
-  lines <- lines %>%
-    mutate(z_score = round((implied_total - avg_total)/sd_total,2))
-  
-}
-
-url <- 'https://sportsdata.usatoday.com/baseball/mlb/odds'
-lines <- clean_totals(url)
+# history <- read_csv('https://raw.githubusercontent.com/matt12oneil/Lineups/master/fdhistory.csv') %>%
+#   janitor::clean_names() %>%
+#   filter(sport == 'mlb' & salary_cap == '$35k' & (!str_detect(link, 'voided') & !str_detect(link, 'endedunmatched')) & date >= '2022-01-01') %>%
+#   mutate(winnings = as.numeric(winnings), score = as.numeric(score)) %>%
+#   group_by(date,score) %>%
+#   summarize(total_entries = sum(entry), winnings = as.double(sum(winnings))) %>%
+#   arrange(desc(score))
+# 
+# clean_totals <- function(url) {
+#   
+#   url <- 'https://sportsdata.usatoday.com/baseball/mlb/odds'
+#   
+#   WS <- read_html(url) %>%
+#     html_nodes(xpath = '//*[@id="__next"]/div[5]/div[3]/div/div[1]/div[2]/div[2]') %>%
+#     html_table()
+#   
+#   lines <- WS[[1]] %>%
+#     janitor::clean_names() %>%
+#     `colnames<-` (c('team','spread','money_line','total','garbage')) %>%
+#     filter(spread != 'Spread') %>%
+#     select(-c(garbage, spread)) %>%
+#     mutate(money_line = as.numeric(money_line)) %>%
+#     mutate(team = case_when(str_detect(team, 'Angels') ~ 'LAA',
+#                             str_detect(team, 'Astros') ~ 'HOU',
+#                             str_detect(team, 'Rangers') ~ 'TEX',
+#                             str_detect(team, 'Mariners') ~ 'SEA',
+#                             str_detect(team, 'Athletics') ~ 'OAK',
+#                             str_detect(team, 'Dodgers') ~ 'LAD',
+#                             str_detect(team, 'Padres') ~ 'SD',
+#                             str_detect(team, 'Giants') ~ 'SF',
+#                             str_detect(team, 'Rockies') ~ 'COL',
+#                             str_detect(team, 'Diamondbacks') ~ 'ARI',
+#                             str_detect(team, 'Guardians') ~ 'CLE',
+#                             str_detect(team, 'Twins') ~ 'MIN',
+#                             str_detect(team, 'White Sox') ~ 'CWS',
+#                             str_detect(team, 'Tigers') ~ 'DET',
+#                             str_detect(team, 'Royals') ~ 'KC',
+#                             str_detect(team, 'Cubs') ~ 'CHC',
+#                             str_detect(team, 'Pirates') ~ 'PIT',
+#                             str_detect(team, 'Reds') ~ 'CIN',
+#                             str_detect(team, 'Brewers') ~ 'MIL',
+#                             str_detect(team, 'Cardinals') ~ 'STL',
+#                             str_detect(team, 'Red Sox') ~ 'BOS',
+#                             str_detect(team, 'Yankees') ~ 'NYY',
+#                             str_detect(team, 'Rays') ~ 'TB',
+#                             str_detect(team, 'Blue Jays') ~ 'TOR',
+#                             str_detect(team, 'Orioles') ~ 'BAL',
+#                             str_detect(team, 'Mets') ~ 'NYM',
+#                             str_detect(team, 'Nationals') ~ 'WSH',
+#                             str_detect(team, 'Phillies') ~ 'PHI',
+#                             str_detect(team, 'Marlins') ~ 'MIA',
+#                             str_detect(team, 'Braves') ~ 'ATL',
+#                             TRUE ~ 'None'
+#     )) %>%
+#     mutate(implied_share = case_when(money_line < 0 ~ round((money_line/(money_line-100)),2),
+#                                      TRUE ~ round((100/(money_line + 100)),2))) %>%
+#     separate(total, into = c('garbage','total'), sep = ' ') %>%
+#     select(-garbage) %>%
+#     mutate(total = as.numeric(substr(total,1,3))) %>%
+#     mutate(implied_total = round((implied_share*total),2))
+#   
+#   sd_total <- sd(lines$implied_total)
+#   avg_total <- mean(lines$implied_total)
+#   
+#   lines <- lines %>%
+#     mutate(z_score = round((implied_total - avg_total)/sd_total,2))
+#   
+# }
+# 
+# url <- 'https://sportsdata.usatoday.com/baseball/mlb/odds'
+# lines <- clean_totals(url)
 
 
 
