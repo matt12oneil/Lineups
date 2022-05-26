@@ -431,7 +431,7 @@ updated_pitchers <- updated %>%
 updated_players <- updated_batters %>%
   bind_rows(updated_pitchers) %>%
   inner_join(rosters, by = c('player' = 'player')) %>%
-  select(-c(slg, est_slg, woba, est_woba, ba, est_ba, avg_hit_angle, anglesweetspotpercent,max_hit_speed,avg_hit_speed, fbld, gb, max_distance, avg_distance, avg_hr_distance, ev95plus, `ev95per-swing`, ev95percent,barrels,brl_percent,brl_pa))
+  select(-c(slg, est_slg, woba, est_woba, ba, est_ba, avg_hit_angle, anglesweetspotpercent,max_hit_speed,avg_hit_speed, fbld, gb, max_distance, avg_distance, avg_hr_distance, ev95plus, ev95percent,barrels,brl_percent,brl_pa))
 
 #all players that played in 2021
 players_2021 <- data.table(get_chadwick_lu()) %>%
