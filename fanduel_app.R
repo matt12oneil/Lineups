@@ -454,7 +454,7 @@ all_players <- function() {
   
   batter_matchups <- whole_day_stats %>%
     mutate_if(is.numeric, round, 2) %>%
-    mutate(Rank = rank(rank(desc(xSlg)) + rank(desc(xWOBA)))) %>%
+    mutate(Rank = rank(desc(xSlg + xWOBA + brl_pa + xBA + hard_hit))) %>%
     arrange(Rank) %>%
     inner_join(pitcher_info, by = c('Pitcher' = 'pitcher_name')) %>%
     mutate(Value = round((salary/1000)/xWOBA,2)) %>%
@@ -472,7 +472,7 @@ pitcher_stats <- function(game_date) {
     group_by(Pitcher) %>%
     dplyr::summarize(brl_pa = mean(brl_pa), brl_pct = mean(brl_pct), hard_hit = mean(hard_hit), max_ev = mean(max_ev), mean_ev = mean(mean_ev), sweet_spot = mean(sweet_spot), xBA = mean(xBA), xWOBA = mean(xWOBA), xSlg = mean(xSlg)) %>%
     ungroup() %>%
-    mutate(Rank = rank(rank(xSlg) + rank(xWOBA))) %>%
+    mutate(Rank = rank(desc(xSlg + xWOBA + brl_pa + xBA + hard_hit))) %>%
     mutate_if(is.numeric, round, 2) %>%
     arrange(xWOBA) %>%
     select(Pitcher, brl_pa, brl_pct, hard_hit, max_ev, mean_ev, sweet_spot, xSlg, xWOBA, Rank) %>%
