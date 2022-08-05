@@ -454,7 +454,7 @@ all_players <- function() {
   
   batter_matchups <- whole_day_stats %>%
     mutate_if(is.numeric, round, 2) %>%
-    mutate(Rank = rank(desc(xSlg + xWOBA + brl_pa + xBA + hard_hit))) %>%
+    mutate(Rank = rank(desc(xSlg + xWOBA + brl_pa + xBA + hard_hit + brl_pct + sweet_spot))) %>%
     arrange(Rank) %>%
     inner_join(pitcher_info, by = c('Pitcher' = 'pitcher_name')) %>%
     mutate(Value = round((salary/1000)/xWOBA,2)) %>%
