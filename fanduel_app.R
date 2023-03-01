@@ -44,87 +44,94 @@ library(jsonlite)
 library(lpSolve)
 
 
-#"sac_fly_double_play",
-
 #only take balls put in play
-valid_events <- c("single","double","triple","home_run","walk","strikeout","field_out","force_out","sac_fly","fielders_choice","grounded_into_double_play","fielders_choice_out","sac_bunt","field_error","hit_by_pitch","catcher_interf","double_play","strikeout_double_play","other_out","triple_play","sac_bunt_double_play")
+valid_events <- c("single","double","triple","home_run","walk","strikeout","field_out","force_out","sac_fly","fielders_choice","grounded_into_double_play","fielders_choice_out","sac_bunt","field_error","hit_by_pitch","double_play","strikeout_double_play","other_out","triple_play","sac_bunt_double_play")
 
 
 
 teams <- mlb_teams(season = 2022, sport_ids = c(1)) %>%
   select(team_id, team_full_name, team_abbreviation)
 
-# history <- read_csv('https://raw.githubusercontent.com/matt12oneil/Lineups/master/fdhistory.csv') %>%
-#   janitor::clean_names() %>%
-#   filter(sport == 'mlb' & salary_cap == '$35k' & (!str_detect(link, 'voided') & !str_detect(link, 'endedunmatched')) & date >= '2022-01-01') %>%
-#   mutate(winnings = as.numeric(winnings), score = as.numeric(score)) %>%
-#   group_by(date,score) %>%
-#   summarize(total_entries = sum(entry), winnings = as.double(sum(winnings))) %>%
-#   arrange(desc(score))
-# 
-# clean_totals <- function(url) {
-#   
-#   url <- 'https://sportsdata.usatoday.com/baseball/mlb/odds'
-#   
-#   WS <- read_html(url) %>%
-#     html_nodes(xpath = '//*[@id="__next"]/div[5]/div[3]/div/div[1]/div[2]/div[2]') %>%
-#     html_table()
-#   
-#   lines <- WS[[1]] %>%
-#     janitor::clean_names() %>%
-#     `colnames<-` (c('team','spread','money_line','total','garbage')) %>%
-#     filter(spread != 'Spread') %>%
-#     select(-c(garbage, spread)) %>%
-#     mutate(money_line = as.numeric(money_line)) %>%
-#     mutate(team = case_when(str_detect(team, 'Angels') ~ 'LAA',
-#                             str_detect(team, 'Astros') ~ 'HOU',
-#                             str_detect(team, 'Rangers') ~ 'TEX',
-#                             str_detect(team, 'Mariners') ~ 'SEA',
-#                             str_detect(team, 'Athletics') ~ 'OAK',
-#                             str_detect(team, 'Dodgers') ~ 'LAD',
-#                             str_detect(team, 'Padres') ~ 'SD',
-#                             str_detect(team, 'Giants') ~ 'SF',
-#                             str_detect(team, 'Rockies') ~ 'COL',
-#                             str_detect(team, 'Diamondbacks') ~ 'ARI',
-#                             str_detect(team, 'Guardians') ~ 'CLE',
-#                             str_detect(team, 'Twins') ~ 'MIN',
-#                             str_detect(team, 'White Sox') ~ 'CWS',
-#                             str_detect(team, 'Tigers') ~ 'DET',
-#                             str_detect(team, 'Royals') ~ 'KC',
-#                             str_detect(team, 'Cubs') ~ 'CHC',
-#                             str_detect(team, 'Pirates') ~ 'PIT',
-#                             str_detect(team, 'Reds') ~ 'CIN',
-#                             str_detect(team, 'Brewers') ~ 'MIL',
-#                             str_detect(team, 'Cardinals') ~ 'STL',
-#                             str_detect(team, 'Red Sox') ~ 'BOS',
-#                             str_detect(team, 'Yankees') ~ 'NYY',
-#                             str_detect(team, 'Rays') ~ 'TB',
-#                             str_detect(team, 'Blue Jays') ~ 'TOR',
-#                             str_detect(team, 'Orioles') ~ 'BAL',
-#                             str_detect(team, 'Mets') ~ 'NYM',
-#                             str_detect(team, 'Nationals') ~ 'WSH',
-#                             str_detect(team, 'Phillies') ~ 'PHI',
-#                             str_detect(team, 'Marlins') ~ 'MIA',
-#                             str_detect(team, 'Braves') ~ 'ATL',
-#                             TRUE ~ 'None'
-#     )) %>%
-#     mutate(implied_share = case_when(money_line < 0 ~ round((money_line/(money_line-100)),2),
-#                                      TRUE ~ round((100/(money_line + 100)),2))) %>%
-#     separate(total, into = c('garbage','total'), sep = ' ') %>%
-#     select(-garbage) %>%
-#     mutate(total = as.numeric(substr(total,1,3))) %>%
-#     mutate(implied_total = round((implied_share*total),2))
-#   
-#   sd_total <- sd(lines$implied_total)
-#   avg_total <- mean(lines$implied_total)
-#   
-#   lines <- lines %>%
-#     mutate(z_score = round((implied_total - avg_total)/sd_total,2))
-#   
-# }
-# 
-# url <- 'https://sportsdata.usatoday.com/baseball/mlb/odds'
-# lines <- clean_totals(url)
+
+#fanduel results history
+
+fd_history <- function(){
+  old_results <- read_csv('https://raw.githubusercontent.com/matt12oneil/Lineups/master/fdhistory.csv') %>%
+    janitor::clean_names() %>%
+    filter(sport == 'mlb' & salary_cap == '$35k' & (!str_detect(link, 'voided') & !str_detect(link, 'endedunmatched')) & date >= '2022-01-01') %>%
+    mutate(winnings = as.numeric(winnings), score = as.numeric(score)) %>%
+    group_by(date,score) %>%
+    summarize(total_entries = sum(entry), winnings = as.double(sum(winnings))) %>%
+    arrange(desc(score))
+  return(old_resu)
+}
+
+
+
+#betting lines for over/under
+clean_totals <- function(url) {
+
+  url <- 'https://sportsdata.usatoday.com/baseball/mlb/odds'
+
+  WS <- read_html(url) %>%
+    html_nodes(xpath = '//*[@id="__next"]/div[5]/div[3]/div/div[1]/div[2]/div[2]') %>%
+    html_table()
+
+  lines <- WS[[1]] %>%
+    janitor::clean_names() %>%
+    `colnames<-` (c('team','spread','money_line','total','garbage')) %>%
+    filter(spread != 'Spread') %>%
+    select(-c(garbage, spread)) %>%
+    mutate(money_line = as.numeric(money_line)) %>%
+    mutate(team = case_when(str_detect(team, 'Angels') ~ 'LAA',
+                            str_detect(team, 'Astros') ~ 'HOU',
+                            str_detect(team, 'Rangers') ~ 'TEX',
+                            str_detect(team, 'Mariners') ~ 'SEA',
+                            str_detect(team, 'Athletics') ~ 'OAK',
+                            str_detect(team, 'Dodgers') ~ 'LAD',
+                            str_detect(team, 'Padres') ~ 'SD',
+                            str_detect(team, 'Giants') ~ 'SF',
+                            str_detect(team, 'Rockies') ~ 'COL',
+                            str_detect(team, 'Diamondbacks') ~ 'ARI',
+                            str_detect(team, 'Guardians') ~ 'CLE',
+                            str_detect(team, 'Twins') ~ 'MIN',
+                            str_detect(team, 'White Sox') ~ 'CWS',
+                            str_detect(team, 'Tigers') ~ 'DET',
+                            str_detect(team, 'Royals') ~ 'KC',
+                            str_detect(team, 'Cubs') ~ 'CHC',
+                            str_detect(team, 'Pirates') ~ 'PIT',
+                            str_detect(team, 'Reds') ~ 'CIN',
+                            str_detect(team, 'Brewers') ~ 'MIL',
+                            str_detect(team, 'Cardinals') ~ 'STL',
+                            str_detect(team, 'Red Sox') ~ 'BOS',
+                            str_detect(team, 'Yankees') ~ 'NYY',
+                            str_detect(team, 'Rays') ~ 'TB',
+                            str_detect(team, 'Blue Jays') ~ 'TOR',
+                            str_detect(team, 'Orioles') ~ 'BAL',
+                            str_detect(team, 'Mets') ~ 'NYM',
+                            str_detect(team, 'Nationals') ~ 'WSH',
+                            str_detect(team, 'Phillies') ~ 'PHI',
+                            str_detect(team, 'Marlins') ~ 'MIA',
+                            str_detect(team, 'Braves') ~ 'ATL',
+                            TRUE ~ 'None'
+    )) %>%
+    mutate(implied_share = case_when(money_line < 0 ~ round((money_line/(money_line-100)),2),
+                                     TRUE ~ round((100/(money_line + 100)),2))) %>%
+    separate(total, into = c('garbage','total'), sep = ' ') %>%
+    select(-garbage) %>%
+    mutate(total = as.numeric(substr(total,1,3))) %>%
+    mutate(implied_total = round((implied_share*total),2))
+
+  sd_total <- sd(lines$implied_total)
+  avg_total <- mean(lines$implied_total)
+
+  lines <- lines %>%
+    mutate(z_score = round((implied_total - avg_total)/sd_total,2))
+
+}
+
+
+#lines <- clean_totals(url)
 
 
 
@@ -205,6 +212,8 @@ xstats_pitchers <- statcast_leaderboards(
   hand = ""
 )
 
+devtools::install_github(repo = "BillPetti/baseballr")
+
 ev_batters <- statcast_leaderboards(
   leaderboard = "exit_velocity_barrels",
   year = 2022,
@@ -249,47 +258,44 @@ ev_pitchers <- statcast_leaderboards(
   hand = ""
 )
 
-# take the average to start getting the index
-avg_x_woba <- mean(xstats_batters$est_woba)
-avg_x_slg <- mean(xstats_batters$est_slg)
-avg_x_ba <- mean(xstats_batters$est_ba)
-
-avg_brl_pa <- mean(ev_batters$brl_pa)
-avg_barrel_pct <- mean(ev_batters$brl_percent)
-avg_hard_hit_pct <- mean(ev_batters$ev95percent)
-avg_max_hit_ev <- mean(ev_batters$max_hit_speed)
-avg_mean_ev <- mean(ev_batters$avg_hit_speed)
-avg_sweet_spot_pct <- mean(ev_batters$anglesweetspotpercent)
-
+#batter_splits vs. different handed pitchers
+batter_splits <- read_csv('https://raw.githubusercontent.com/matt12oneil/Lineups/master/batters_22_splits.csv') %>%
+  mutate(mean_ev_index_split = avg_launch_speed/mean(avg_launch_speed, na.rm = T), brl_index_split = brl_pct/mean(brl_pct, na.rm = T), xba_index_split = xba/mean(xba, na.rm = T), woba_index_split = woba/mean(woba, na.rm = T), xwoba_index_split = xwoba/mean(xwoba, na.rm = T), iso_index_split = iso/mean(iso, na.rm = T)) %>%
+  select(batter, stand, p_throws, mean_ev_index_split, brl_index_split, xba_index_split, woba_index_split, xwoba_index_split, iso_index_split)
+pitcher_splits <- read_csv('https://raw.githubusercontent.com/matt12oneil/Lineups/master/pitchers_22_splits.csv') %>%
+  mutate(mean_ev_index_split = avg_launch_speed/mean(avg_launch_speed, na.rm = T), brl_index_split = brl_pct/mean(brl_pct, na.rm = T), xba_index_split = xba/mean(xba, na.rm = T), woba_index_split = woba/mean(woba, na.rm = T), xwoba_index_split = xwoba/mean(xwoba, na.rm = T), iso_index_split = iso/mean(iso, na.rm = T)) %>%
+  select(pitcher, stand, p_throws, mean_ev_index_split, brl_index_split, xba_index_split, woba_index_split, xwoba_index_split, iso_index_split)
 
 
 
 updated_batters <- xstats_batters %>%
   left_join(rosters, by = c('player_id' = 'player')) %>%
   select(player = player_id, slg, est_slg, woba, est_woba, ba, est_ba) %>%
-  mutate(xslg_index = est_slg/avg_x_slg, xwoba_index = est_woba/avg_x_woba, xba_index = est_ba/avg_x_ba) %>%
+  mutate(xslg_index = est_slg/mean(est_slg), xwoba_index = est_woba/mean(est_woba), xba_index = est_ba/mean(est_ba)) %>%
   inner_join(ev_batters, by = c('player' = 'player_id')) %>%
-  mutate(player_name = paste0(first_name,' ',last_name), brl_pa_index = brl_pa/avg_brl_pa, brl_pct_index = brl_percent/avg_barrel_pct, hard_hit_index = ev95percent/avg_hard_hit_pct, max_ev_index = max_hit_speed/avg_max_hit_ev, mean_ev_index = avg_hit_speed/avg_mean_ev, sweet_spot_index = anglesweetspotpercent/avg_sweet_spot_pct) %>%
-  mutate(type = 'batter')
+  mutate(player_name = paste0(first_name,' ',last_name), brl_pa_index = brl_pa/mean(brl_pa), brl_pct_index = brl_percent/mean(brl_percent), hard_hit_index = ev95percent/mean(ev95percent), max_ev_index = max_hit_speed/mean(max_hit_speed), mean_ev_index = avg_hit_speed/mean(avg_hit_speed), sweet_spot_index = anglesweetspotpercent/mean(anglesweetspotpercent)) %>%
+  mutate(type = 'batter') %>%
+  select(player, player_name, type, est_slg, slg, est_woba, woba, est_ba, ba, xslg_index, xwoba_index, xba_index, brl_pa_index, brl_pct_index, hard_hit_index, max_ev_index, mean_ev_index, sweet_spot_index) %>%
+  inner_join(batter_splits, by = c('player' = 'batter')) %>%
+  select(player, player_name, type, stand, p_throws, est_slg, slg, est_woba, woba, est_ba, ba, xslg_index, xwoba_index, xba_index, brl_pa_index, brl_pct_index, hard_hit_index, max_ev_index, mean_ev_index, sweet_spot_index, mean_ev_index_split, brl_index_split, xba_index_split, woba_index_split, xwoba_index_split, iso_index_split)
 
 updated_pitchers <- xstats_pitchers %>%
   left_join(rosters, by = c('player_id' = 'player')) %>%
   select(player = player_id,slg, est_slg, woba, est_woba, ba, est_ba) %>%
-  mutate(xslg_index = est_slg/avg_x_slg, xwoba_index = est_woba/avg_x_woba, xba_index = est_ba/avg_x_ba) %>%
+  mutate(xslg_index = est_slg/mean(est_slg), xwoba_index = est_woba/mean(est_woba), xba_index = est_ba/mean(est_ba)) %>%
   inner_join(ev_pitchers, by = c('player' = 'player_id')) %>%
-  mutate(player_name = paste0(first_name,' ',last_name), brl_pa_index = brl_pa/avg_brl_pa, brl_pct_index = brl_percent/avg_barrel_pct, hard_hit_index = ev95percent/avg_hard_hit_pct, max_ev_index = max_hit_speed/avg_max_hit_ev, mean_ev_index = avg_hit_speed/avg_mean_ev, sweet_spot_index = anglesweetspotpercent/avg_sweet_spot_pct) %>%
-  mutate(type = 'pitcher')
+  mutate(player_name = paste0(first_name,' ',last_name), brl_pa_index = brl_pa/mean(brl_pa), brl_pct_index = brl_percent/mean(brl_percent), hard_hit_index = ev95percent/mean(ev95percent), max_ev_index = max_hit_speed/mean(max_hit_speed), mean_ev_index = avg_hit_speed/mean(avg_hit_speed), sweet_spot_index = anglesweetspotpercent/mean(anglesweetspotpercent)) %>%
+  mutate(type = 'pitcher') %>%
+  select(player, player_name, type, est_slg, slg, est_woba, woba, est_ba, ba, xslg_index, xwoba_index, xba_index, brl_pa_index, brl_pct_index, hard_hit_index, max_ev_index, mean_ev_index, sweet_spot_index) %>%
+  inner_join(pitcher_splits, by = c('player' = 'pitcher')) %>%
+  select(player, player_name, type, stand, p_throws, est_slg, slg, est_woba, woba, est_ba, ba, xslg_index, xwoba_index, xba_index, brl_pa_index, brl_pct_index, hard_hit_index, max_ev_index, mean_ev_index, sweet_spot_index, mean_ev_index_split, brl_index_split, xba_index_split, woba_index_split, xwoba_index_split, iso_index_split)
 
 updated_players <- updated_batters %>%
   bind_rows(updated_pitchers) %>%
-  inner_join(rosters, by = c('player' = 'player')) %>%
-  select(-c(slg, est_slg, woba, est_woba, ba, est_ba, avg_hit_angle, anglesweetspotpercent,max_hit_speed,avg_hit_speed, fbld, gb, max_distance, avg_distance, avg_hr_distance, ev95plus, ev95percent,barrels,brl_percent,brl_pa))
+  inner_join(rosters, by = c('player' = 'player'))
 
-#all players that played in 2021
-players_2021 <- data.table(get_chadwick_lu()) %>%
-  filter(is.na(key_mlbam) == F & (mlb_played_last == 2022 | mlb_played_last == 2021)) %>%
-  mutate(full_name = paste(name_first, name_last))
-
+#can we get the game time to join in the data from gambling and not run into a DH issue
+#also need to get pitcher handedness so we can get L/R splits
 salary <- read_csv('https://raw.githubusercontent.com/matt12oneil/Lineups/master/fdsalary.csv') %>%
   janitor::clean_names() %>%
   filter(is.na(injury_indicator)) %>%
@@ -311,7 +317,7 @@ pitchers <- read_csv('https://raw.githubusercontent.com/matt12oneil/Lineups/mast
   inner_join(updated_players, by = c('pitcher_id' = 'player', 'pitcher_team' = 'player_team')) %>%
   filter(type == 'pitcher') %>%
   mutate(pitcher_xslg_index = xslg_index, pitcher_xwoba_index = xwoba_index, pitcher_xba_index = xba_index, pitcher_barrel_pa_index = brl_pa_index, pitcher_barrel_pct_index = brl_pct_index, pitcher_hard_hit_index = hard_hit_index, pitcher_max_ev_index = max_ev_index, pitcher_mean_ev_index = mean_ev_index, pitcher_sweet_spot_index = sweet_spot_index) %>%
-  select(-c(xslg_index, xwoba_index)) %>%
+  select(-c(xslg_index, xwoba_index, player_name.y, player_name.x)) %>%
   distinct()
 
 players <- salary %>%

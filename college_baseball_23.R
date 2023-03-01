@@ -1,0 +1,73 @@
+library(shiny)
+library(glue)
+library(tidyverse)
+library(dplyr)
+library(formattable)
+library(gtExtras)
+library(rsconnect)
+library(baseballr)
+library(retrosheet)
+library(gt)
+library(stringr)
+library(janitor)
+library(DT)
+library(furrr)
+library(data.table)
+library(readxl)
+library(scales)
+library(tidytable)
+library(googlesheets4)
+devtools::install_github("BillPetti/baseballr", ref = "development_branch")
+
+all_teams <- ncaa_teams(2023)
+
+matt <- c('Georgia Tech','Ole Miss','Texas','Stanford','Maryland','Creighton', 'UC Santa Barbara','UCLA')
+ryan <- c('North Carolina','LSU','Oklahoma St.','Oregon','Michigan','UConn','Southern Miss.','Virginia')
+
+matt_teams <- all_teams %>%
+  filter(team_name %in% matt) %>%
+  group_by(team_name, team_id) %>%
+  summarize(year = max(year))
+
+ryan_teams <- all_teams %>%
+  filter(team_name %in% ryan) %>%
+  group_by(team_name, team_id) %>%
+  summarize(year = max(year))
+
+all_teams <- matt_teams %>%
+  bind_rows(ryan_teams)
+
+ncaa_schedule_info(teamid = 392, year = 2023)
+
+
+results <- function(team_id_number){
+  team_name <- all_teams %>%
+    filter(team_id == team_id_number) %>%
+    select(team_name)
+    
+  ncaa_schedule_info(teamid = team_id_number, year = 2023) %>%
+    mutate(team = team_name$team_name)
+}
+
+matt_results <- map_dfr(matt_teams$team_id, results) %>%
+  filter(!is.na(contest_id)) %>%
+  select(team, date, home_team, home_team_conference_id, home_team_score, away_team, away_team_score, away_team_conference_id) %>%
+  mutate(winner = case_when(home_team_score > away_team_score ~ home_team,
+                            home_team_score < away_team_score ~ away_team,
+                            TRUE ~ '')) %>%
+  mutate(result = case_when(team == winner ~ 'W',
+                            team != winner ~ 'L'))
+ryan_results <- map_dfr(ryan_teams$team_id, results) %>%
+  filter(!is.na(contest_id)) %>%
+  select(team, date, home_team, home_team_conference_id, home_team_score, away_team, away_team_score, away_team_conference_id) %>%
+  mutate(winner = case_when(home_team_score > away_team_score ~ home_team,
+                            home_team_score < away_team_score ~ away_team,
+                            TRUE ~ '')) %>%
+  mutate(result = case_when(team == winner ~ 'W',
+                            team != winner ~ 'L'))
+
+sheet_write(matt_results, ss = '1i2G5w_zqcuABeXnb0XY98pAsAUt361HwW6YkFuOSTrA', sheet = 'Matt Results')
+sheet_write(ryan_results, ss = '1i2G5w_zqcuABeXnb0XY98pAsAUt361HwW6YkFuOSTrA', sheet = 'Ryan Results')
+
+
+
