@@ -17,9 +17,15 @@ library(readxl)
 library(scales)
 library(tidytable)
 library(googlesheets4)
-devtools::install_github("BillPetti/baseballr", ref = "development_branch")
+devtools::install_github("BillPetti/baseballr")
 
 all_teams <- ncaa_teams(2023)
+# 
+# 
+# write.csv(all_teams, "/Users/mattoneil/Documents/MO/Lineups/college_teams", row.names=FALSE)
+
+all_teams <- read_csv('https://raw.githubusercontent.com/matt12oneil/Lineups/master/college_teams')
+
 
 matt <- c('Georgia Tech','Ole Miss','Texas','Stanford','Maryland','Creighton', 'UC Santa Barbara','UCLA')
 ryan <- c('North Carolina','LSU','Oklahoma St.','Oregon','Michigan','UConn','Southern Miss.','Virginia')
@@ -37,16 +43,43 @@ ryan_teams <- all_teams %>%
 all_teams <- matt_teams %>%
   bind_rows(ryan_teams)
 
-ncaa_schedule_info(teamid = 392, year = 2023)
+ncaa_schedule_info(team_id = 169, year = 2023)
+
+baseballr::load_ncaa_baseball_schedule()
+
+team_name <- all_teams %>%
+  filter(team_id == 169) %>%
+  select(team_name)
 
 
 results <- function(team_id_number){
+  
   team_name <- all_teams %>%
     filter(team_id == team_id_number) %>%
     select(team_name)
-    
-  ncaa_schedule_info(teamid = team_id_number, year = 2023) %>%
+  
+  matt <- c('Georgia Tech','Ole Miss','Texas','Stanford','Maryland','Creighton', 'UC Santa Barbara','UCLA')
+  ryan <- c('North Carolina','LSU','Oklahoma St.','Oregon','Michigan','UConn','Southern Miss.','Virginia')
+  
+  matt_teams <- all_teams %>%
+    filter(team_name %in% matt) %>%
+    group_by(team_name, team_id) %>%
+    summarize(year = max(year))
+  
+  ryan_teams <- all_teams %>%
+    filter(team_name %in% ryan) %>%
+    group_by(team_name, team_id) %>%
+    summarize(year = max(year))
+  
+  all_teams <- matt_teams %>%
+    bind_rows(ryan_teams)
+  
+  baseballr::load_ncaa_baseball_schedule() %>%
+    filter(home_team_id %in% all_teams$team_id | away_team_id %in% all_teams$team_id) %>%
+    filter(!is.na(home_team_score) | !is.na(away_team_score)) %>%
+    filter(home_team_id == team_id_number | away_team_id == team_id_number) %>%
     mutate(team = team_name$team_name)
+
 }
 
 matt_results <- map_dfr(matt_teams$team_id, results) %>%
