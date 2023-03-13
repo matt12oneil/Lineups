@@ -24,6 +24,8 @@ library(XML)
 library(httr)
 library(jsonlite)
 library(lpSolve)
+library(git2rdata)
+library(git2r)
 devtools::install_github("BillPetti/baseballr", ref = "development_branch")
 
 tictoc::tic()
@@ -74,5 +76,8 @@ pitchers <- events %>%
 write.csv(batters, "/Users/mattoneil/Documents/MO/Lineups/batters_22_splits.csv", row.names=FALSE)
 write.csv(pitchers, "/Users/mattoneil/Documents/MO/Lineups/pitchers_22_splits.csv", row.names=FALSE)
 
+
+root <- "~/myproject" 
+write_vc(batters, file = "/batters_22_splits", root = 'matt12oneil/Lineups')
 
 
