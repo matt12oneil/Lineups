@@ -265,7 +265,7 @@ salary <- read_csv('https://raw.githubusercontent.com/matt12oneil/Lineups/master
   distinct() %>%
   separate(game, into = c('away','home'), sep = '@') %>%
   inner_join(park_factors, by = c('home'='team_abbreviation')) %>%
-  select(batter_id = key_mlbam, player_name, team, opponent, p_throws, stand, batter_xslg = xslg_index, batter_xwoba = xwoba_index, batter_xba = xba_index, batter_barrel_pa = brl_pa_index, batter_barrel_pct = brl_pct_index, batter_hard_hit = hard_hit_index, batter_max_ev = max_ev_index, batter_mean_ev = mean_ev_index, batter_sweet_spot = sweet_spot_index, batter_mean_ev_split = mean_ev_index_split, batter_mean_ev_split = mean_ev_index_split, batter_brl_split = brl_index_split, batter_xba_split = xba_index_split, batter_woba_split = woba_index_split, batter_xwoba_split = xwoba_index_split, batter_iso_split = iso_index_split, park_factors = basic_1yr) %>%
+  select(batter_id = key_mlbam, player_name, team, salary, opponent, p_throws, stand, batter_xslg = xslg_index, batter_xwoba = xwoba_index, batter_xba = xba_index, batter_barrel_pa = brl_pa_index, batter_barrel_pct = brl_pct_index, batter_hard_hit = hard_hit_index, batter_max_ev = max_ev_index, batter_mean_ev = mean_ev_index, batter_sweet_spot = sweet_spot_index, batter_mean_ev_split = mean_ev_index_split, batter_mean_ev_split = mean_ev_index_split, batter_brl_split = brl_index_split, batter_xba_split = xba_index_split, batter_woba_split = woba_index_split, batter_xwoba_split = xwoba_index_split, batter_iso_split = iso_index_split, park_factors = basic_1yr) %>%
   distinct()
 
 
@@ -276,7 +276,7 @@ pitchers <- read_csv('https://raw.githubusercontent.com/matt12oneil/Lineups/mast
   select(pitcher_id = player, pitcher_name = nickname, pitcher_team = team, pitcher_salary = salary) %>%
   inner_join(pitchers_statcast, by = c('pitcher_id' = 'player')) %>%
   filter(type == 'pitcher') %>%
-  select(pitcher_id, pitcher_name, pitcher_team, p_throws, stand, pitcher_xslg = xslg_index, pitcher_xwoba = xwoba_index, pitcher_xba = xba_index, pitcher_barrel_pa = brl_pa_index, pitcher_barrel_pct = brl_pct_index, pitcher_hard_hit = hard_hit_index, pitcher_max_ev = max_ev_index, pitcher_mean_ev = mean_ev_index, pitcher_sweet_spot = sweet_spot_index, pitcher_mean_ev_split = mean_ev_index_split, pitcher_mean_ev_split = mean_ev_index_split, pitcher_brl_split = brl_index_split, pitcher_xba_split = xba_index_split, pitcher_woba_split = woba_index_split, pitcher_xwoba_split = xwoba_index_split, pitcher_iso_split = iso_index_split) %>%
+  select(pitcher_id, pitcher_name, pitcher_team, pitcher_salary, p_throws, stand, pitcher_xslg = xslg_index, pitcher_xwoba = xwoba_index, pitcher_xba = xba_index, pitcher_barrel_pa = brl_pa_index, pitcher_barrel_pct = brl_pct_index, pitcher_hard_hit = hard_hit_index, pitcher_max_ev = max_ev_index, pitcher_mean_ev = mean_ev_index, pitcher_sweet_spot = sweet_spot_index, pitcher_mean_ev_split = mean_ev_index_split, pitcher_mean_ev_split = mean_ev_index_split, pitcher_brl_split = brl_index_split, pitcher_xba_split = xba_index_split, pitcher_woba_split = woba_index_split, pitcher_xwoba_split = xwoba_index_split, pitcher_iso_split = iso_index_split) %>%
   distinct()
 
 players <- salary %>%
@@ -301,13 +301,67 @@ whole_day_stats <- players %>%
          , xwoba_split = batter_xwoba_split * pitcher_xwoba_split * park_factors
          , brl_split = batter_brl_split * pitcher_brl_split * park_factors
          , iso_split = batter_iso_split * pitcher_iso_split * park_factors) %>%
-  select(batter_id, batter = player_name, batter_team = team, pitcher_id, pitcher = pitcher_name, pitcher_team = opponent, p_throws, batter_stand = stand, xslg, xba, barrel_pa, barrel_pct, hard_hit, max_ev, sweet_spot, mean_ev_split, xba_split, woba_split, xwoba_split, brl_split, iso_split)
+  select(batter_id, batter = player_name, batter_team = team, batter_salary = salary, pitcher_id, pitcher = pitcher_name, pitcher_team = opponent, pitcher_salary, p_throws, batter_stand = stand, xslg, xwoba, xba, barrel_pa, barrel_pct, hard_hit, max_ev, sweet_spot, mean_ev_split, xba_split, woba_split, xwoba_split, brl_split, iso_split)
 
 teams <- players %>%
   distinct(team) %>%
   arrange(team)  
 
+lineup_stats_no_split <- function(team_name){
+  
+  pitcher_name <- whole_day_stats %>%
+    filter(batter_team == team_name) %>%
+    select(pitcher) %>%
+    distinct()
+  
+  opposing_team <- whole_day_stats %>%
+    filter(batter_team == team_name) %>%
+    select(pitcher_team) %>%
+    distinct()
+  
+  order <- whole_day_stats %>%
+    filter(batter_team == team_name)
+  
+  
+  all_matchups <- order %>%
+    select(Batter = batter, Pitcher = pitcher_name, Salary = batter_salary, xslg, xba, barrel_pa, barrel_pct, hard_hit, max_ev, sweet_spot, xwoba) %>%
+    mutate_if(is.numeric,round,2) %>%
+    gt() %>%
+    gt_merge_stack(col1 = Batter, Pitcher) %>%
+    gt_color_rows(xslg:xWOBA, palette = "grDevices::blues9") %>%
+    tab_header(title = glue("{team_name} Lineup Projections vs. {opposing_team$Opponent} Pitcher {pitcher_name}")) %>%
+    tab_options(table.width = 12)
+  
+  return(all_matchups)
+}
 
+lineup_stats_w_split <- function(team_name){
+  
+  pitcher_name <- whole_day_stats %>%
+    filter(batter_team == team_name) %>%
+    select(pitcher) %>%
+    distinct()
+  
+  opposing_team <- whole_day_stats %>%
+    filter(batter_team == team_name) %>%
+    select(pitcher_team) %>%
+    distinct()
+  
+  order <- whole_day_stats %>%
+    filter(batter_team == team_name)
+  
+  
+  all_matchups <- order %>%
+    select(Batter = batter, Pitcher = pitcher_name, Salary = batter_salary, mean_ev_split, xba_split, woba_split, xwoba_split, brl_split, iso_split) %>%
+    mutate_if(is.numeric,round,2) %>%
+    gt() %>%
+    gt_merge_stack(col1 = Batter, Pitcher) %>%
+    gt_color_rows(xslg:xWOBA, palette = "grDevices::blues9") %>%
+    tab_header(title = glue("{team_name} Lineup Projections vs. {opposing_team$Opponent} Pitcher {pitcher_name}")) %>%
+    tab_options(table.width = 12)
+  
+  return(all_matchups)
+}
 
 
 
