@@ -301,7 +301,7 @@ whole_day_stats <- players %>%
          , xwoba_split = batter_xwoba_split * pitcher_xwoba_split * park_factors
          , brl_split = batter_brl_split * pitcher_brl_split * park_factors
          , iso_split = batter_iso_split * pitcher_iso_split * park_factors) %>%
-  select(batter_id, batter = player_name, batter_team = team, batter_salary = salary, pitcher_id, pitcher = pitcher_name, pitcher_team = opponent, pitcher_salary, p_throws, batter_stand = stand, xslg, xwoba, xba, barrel_pa, barrel_pct, hard_hit, max_ev, sweet_spot, mean_ev_split, xba_split, woba_split, xwoba_split, brl_split, iso_split)
+  select(batter_id, batter = player_name, batter_team = team, batter_salary = salary, pitcher_id, pitcher = pitcher_name, pitcher_team = opponent, pitcher_salary, p_throws, batter_stand = stand, xslg, xwoba, xba, barrel_pa, barrel_pct, hard_hit, mean_ev, max_ev, sweet_spot, mean_ev_split, xba_split, woba_split, xwoba_split, brl_split, iso_split)
 
 teams <- players %>%
   distinct(team) %>%
@@ -324,11 +324,11 @@ lineup_stats_no_split <- function(team_name){
   
   
   all_matchups <- order %>%
-    select(Batter = batter, Pitcher = pitcher_name, Salary = batter_salary, xslg, xba, barrel_pa, barrel_pct, hard_hit, max_ev, sweet_spot, xwoba) %>%
+    select(Batter = batter, Pitcher = pitcher_name, Salary = batter_salary, xslg, xba, xwoba, barrel_pa, barrel_pct, hard_hit, mean_ev, max_ev, sweet_spot, woba) %>%
     mutate_if(is.numeric,round,2) %>%
     gt() %>%
     gt_merge_stack(col1 = Batter, Pitcher) %>%
-    gt_color_rows(xslg:xWOBA, palette = "grDevices::blues9") %>%
+    gt_color_rows(xslg:woba, palette = "grDevices::blues9") %>%
     tab_header(title = glue("{team_name} Lineup Projections vs. {opposing_team$Opponent} Pitcher {pitcher_name}")) %>%
     tab_options(table.width = 12)
   
@@ -356,14 +356,37 @@ lineup_stats_w_split <- function(team_name){
     mutate_if(is.numeric,round,2) %>%
     gt() %>%
     gt_merge_stack(col1 = Batter, Pitcher) %>%
-    gt_color_rows(xslg:xWOBA, palette = "grDevices::blues9") %>%
+    gt_color_rows(mean_ev_split:iso_split, palette = "grDevices::blues9") %>%
     tab_header(title = glue("{team_name} Lineup Projections vs. {opposing_team$Opponent} Pitcher {pitcher_name}")) %>%
     tab_options(table.width = 12)
   
   return(all_matchups)
 }
 
-
-
-
-
+pitcher_stats <- function() {
+  
+  clean_pitchers <- pitchers %>%
+    select(pitcher_id, pitcher_name, pitcher_team, pitcher_salary) %>%
+    distinct()
+    
+  pitcher_aggs <- whole_day_stats %>%
+    group_by(pitcher, pitcher_id, pitcher_team, batter_team, pitcher_team) %>%
+    summarize(barrel_pa = mean(barrel_pa), barrel_pct = mean(barrel_pct), hard_hit = mean(hard_hit), max_ev = mean(max_ev), mean_ev = mean(mean_ev), sweet_spot = mean(sweet_spot), xba = mean(xba), xwoba = mean(xwoba), xslg = mean(xslg)) %>%
+    ungroup() %>%
+    mutate_if(is.numeric, round, 2) %>%
+    mutate(Rank = rank((barrel_pa + barrel_pct + (2*hard_hit) + max_ev + mean_ev + (2*sweet_spot) + xba + (2*xslg) + (2*xwoba)))) %>%
+    arrange(Rank) %>%
+    select(Pitcher = pitcher, pitcher_id, Team = pitcher_team, Opponent = batter_team, xba, xwoba, xslg, barrel_pa, barrel_pct, hard_hit, max_ev, mean_ev, sweet_spot, Rank) %>%
+    inner_join(clean_pitchers, by = c('Pitcher' = 'pitcher_name', "Team" = 'pitcher_team', 'pitcher_id')) %>%
+    mutate(Price = dollar(as.numeric(pitcher_salary))) %>%
+    mutate(Value = round((pitcher_salary/1000)/xwoba,2)) %>%
+    select(Pitcher, Price, Team, Opponent, xba, xwoba, xslg, barrel_pa, barrel_pct, hard_hit, max_ev, mean_ev, sweet_spot, Rank, Value) %>%
+    mutate(Rank = round(Rank,0)) %>%
+    arrange(Rank) %>%
+    gt() %>%
+    gt_color_rows(xba:Rank, palette = "RColorBrewer::Reds") %>%
+    tab_header(title = glue('Pitcher Averages for {date_of_game}'))
+  
+  return(pitcher_aggs)
+}
+pitcher_stats()
