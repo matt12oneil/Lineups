@@ -419,8 +419,7 @@ positions_table <- function(position_choice = c('C','1B','2B','3B','SS','OF'), d
     mutate(dollar_per_agg = round((batter_salary)/agg_total,2)) %>%
     mutate(value_rank = rank(desc(salary_rank/Rank))) %>%
     select(batter, batter_team, batter_salary, pitcher, pitcher_team, agg_total, Rank, salary_rank, value_rank) %>%
-    #arrange(value_rank) %>%
-    arrange(Rank) %>%
+    arrange(value_rank) %>%
     mutate_if(is.numeric, round, 0) %>%
     mutate(value = round(salary_rank/Rank,2)) %>%
     select(-value_rank) %>%
