@@ -1,3 +1,11 @@
+#switch positions to reactable instead of GT
+#switch lineups to reactable instead of GT
+#potentially switch index and all batters pages to reactable instead of datatable
+#maximize the total agg in terms of dollars
+#add in runs total rank by team
+#add in strikeouts total by pitcher
+
+
 pacman::p_load(shiny,shiny,tidyverse,dplyr,formattable,gtExtras,rsconnect,baseballr,retrosheet,gt,stringr,janitor,DT,furrr,data.table,readxl,scales,shinyWidgets,lubridate,ggrepel,rvest,XML,httr,jsonlite,lpSolve,tidytable, glue)
 
 devtools::install_github("camdenk/mlbplotR")
@@ -117,7 +125,8 @@ park_factors <- fg_park(2022) %>%
   left_join(team_stadiums, by = c('home_team' = 'team_name')) %>%
   select(team_abbreviation, venue_name, single, double, triple, hr, so, UIBB, GB, FB, LD, IFFB, FIP, basic_5yr, basic_3yr = `3yr`, basic_1yr = `1yr`) %>%
   mutate(single = single/100, double = double/100, triple = triple/100, hr = hr/100, so = so/100, UIBB = UIBB/100, GB = GB/100, FB = FB/100, LD = LD/100, IFFB = IFFB/100, FIP = FIP/100) %>%
-  mutate(team_abbreviation)
+  mutate(team_abbreviation = ifelse(is.na(team_abbreviation),"ARI",team_abbreviation))
+  
 
 
 #clarify the season for the statcast data
@@ -289,22 +298,24 @@ players <- salary %>%
 #adding in the account for park factors (basic 1 year)
 
 whole_day_stats <- players %>%
-  mutate(xslg = batter_xslg * pitcher_xslg * park_factors
-         , xwoba = batter_xwoba * pitcher_xwoba * park_factors
-         , xba = batter_xba * pitcher_xba * park_factors
-         , barrel_pa = batter_barrel_pa * pitcher_barrel_pa * park_factors
-         , barrel_pct = batter_barrel_pct * pitcher_barrel_pct * park_factors 
-         , hard_hit = batter_hard_hit * pitcher_hard_hit * park_factors
-         , max_ev = batter_max_ev * pitcher_max_ev * park_factors
-         , mean_ev = batter_max_ev * pitcher_max_ev * park_factors
-         , sweet_spot = batter_sweet_spot * pitcher_sweet_spot * park_factors
-         , mean_ev_split = batter_mean_ev_split * pitcher_mean_ev_split * park_factors
-         , xba_split = batter_xba_split * pitcher_xba_split * park_factors
-         , woba_split = batter_woba_split * pitcher_woba_split * park_factors
-         , xwoba_split = batter_xwoba_split * pitcher_xwoba_split * park_factors
-         , brl_split = batter_brl_split * pitcher_brl_split * park_factors
-         , iso_split = batter_iso_split * pitcher_iso_split * park_factors) %>%
-  select(batter_id, batter = player_name, batter_team = team, batter_salary = salary, position, pitcher_id, pitcher = pitcher_name, pitcher_team = opponent, pitcher_salary, p_throws, batter_stand = stand, xslg, xwoba, xba, barrel_pa, barrel_pct, hard_hit, mean_ev, max_ev, sweet_spot, mean_ev_split, xba_split, woba_split, xwoba_split, brl_split, iso_split) %>%
+  mutate(xslg = (batter_xslg + pitcher_xslg)/2 * park_factors
+         , xwoba = (batter_xwoba + pitcher_xwoba)/2 * park_factors
+         , xba = (batter_xba + pitcher_xba)/2 * park_factors
+         , barrel_pa = (batter_barrel_pa + pitcher_barrel_pa)/2 * park_factors
+         , barrel_pct = (batter_barrel_pct + pitcher_barrel_pct)/2 * park_factors 
+         , hard_hit = (batter_hard_hit + pitcher_hard_hit)/2 * park_factors
+         , max_ev = (batter_max_ev + pitcher_max_ev)/2 * park_factors
+         , mean_ev = (batter_mean_ev + pitcher_mean_ev)/2 * park_factors
+         , sweet_spot = (batter_sweet_spot + pitcher_sweet_spot)/2 * park_factors
+         , mean_ev_split = (batter_mean_ev_split + pitcher_mean_ev_split)/2 * park_factors
+         , xba_split = (batter_xba_split + pitcher_xba_split)/2 * park_factors
+         , woba_split = (batter_woba_split + pitcher_woba_split)/2 * park_factors
+         , xwoba_split = (batter_xwoba_split + pitcher_xwoba_split)/2 * park_factors
+         , brl_split = (batter_brl_split + pitcher_brl_split)/2 * park_factors
+         , iso_split = (batter_iso_split + pitcher_iso_split)/2 * park_factors) %>%
+  mutate(agg_total = ((xba) + (xwoba) + (xslg) + (barrel_pa) + (barrel_pct) + (hard_hit) + (max_ev) + (mean_ev) + (sweet_spot) + mean_ev_split + xba_split + woba_split + xwoba_split + brl_split + iso_split)) %>%
+  mutate(agg_index = round(agg_total/mean(agg_total)*100,2)) %>%
+  select(batter_id, batter = player_name, batter_team = team, batter_salary = salary, position, pitcher_id, pitcher = pitcher_name, pitcher_team = opponent, pitcher_salary, p_throws, batter_stand = stand, agg_index, xslg, xwoba, xba, barrel_pa, barrel_pct, hard_hit, mean_ev, max_ev, sweet_spot, mean_ev_split, xba_split, woba_split, xwoba_split, brl_split, iso_split) %>%
   filter(position != 'P')
 
 teams <- players %>%
@@ -313,12 +324,14 @@ teams <- players %>%
 
 player_stats <- whole_day_stats %>%
   mutate_if(is.numeric, round, 2) %>%
-  mutate(agg_total = ((2*xba) + (2*xwoba) + (2*xslg) + (2*barrel_pa) + (2*barrel_pct) + (2*hard_hit) + (2*max_ev) + (2*mean_ev) + (2*sweet_spot) + mean_ev_split + xba_split + woba_split + xwoba_split + brl_split + iso_split)) %>%
-  arrange(desc(agg_total))
+  arrange(desc(agg_index)) %>%
+  select(batter, team = batter_team, salary = batter_salary, position, agg = agg_index, xba, xslg, xwoba, brl_pa = barrel_pa, brl_pct =  barrel_pct, hard_hit, sweet_spot, xba_split, xwoba_split, brl_split)
 
 lineup_stats <- function(team_name){
   
-  pitcher_name <- whole_day_stats %>%
+  #team_name <- 'BOS'
+  
+  opp_pitcher_name <- whole_day_stats %>%
     filter(batter_team == team_name) %>%
     select(pitcher) %>%
     distinct()
@@ -333,12 +346,14 @@ lineup_stats <- function(team_name){
   
   
   all_matchups <- order %>%
-    select(Batter = batter, Pitcher = pitcher_name, Salary = batter_salary, xslg, xba, xwoba, barrel_pa, barrel_pct, hard_hit, mean_ev, max_ev, sweet_spot, woba, mean_ev_split, xba_split, woba_split, xwoba_split, brl_split, iso_split) %>%
+    select(Batter = batter, Pitcher = pitcher, Salary = batter_salary, agg_index, xba, xwoba, xslg, barrel_pa, barrel_pct, hard_hit, max_ev, mean_ev, sweet_spot, mean_ev_split, xba_split, woba_split, xwoba_split, brl_split, iso_split) %>%
     mutate_if(is.numeric,round,2) %>%
+    arrange(desc(agg_index)) %>%
+    select(Batter, Pitcher, Salary, agg = agg_index, xba, xslg, xwoba, brl_pa = barrel_pa, brl_pct = barrel_pct, hard_hit, sweet_spot, xba_split, xwoba_split, brl_split) %>%
     gt() %>%
     gt_merge_stack(col1 = Batter, Pitcher) %>%
-    gt_color_rows(xslg:iso_split, palette = "grDevices::blues9") %>%
-    tab_header(title = glue("{team_name} Lineup Projections vs. {opposing_team$Opponent} Pitcher {pitcher_name}")) %>%
+    gt_color_rows(agg:brl_split, palette = "grDevices::blues9") %>%
+    tab_header(title = glue("{team_name} Lineup Projections vs. {opposing_team$Opponent} Pitcher: {opp_pitcher_name$pitcher}")) %>%
     tab_options(table.width = 12)
   
   return(all_matchups)
@@ -353,57 +368,30 @@ pitcher_stats <- function() {
     
   pitcher_aggs <- whole_day_stats %>%
     group_by(pitcher, pitcher_id, pitcher_team, batter_team, pitcher_team) %>%
-    summarize(barrel_pa = mean(barrel_pa), barrel_pct = mean(barrel_pct), hard_hit = mean(hard_hit), max_ev = mean(max_ev), mean_ev = mean(mean_ev), sweet_spot = mean(sweet_spot), xba = mean(xba), xwoba = mean(xwoba), xslg = mean(xslg), mean_ev_split = mean(mean_ev_split), xba_split = mean(xba_split), woba_split = mean(woba_split), xwoba_split = mean(xwoba_split), brl_split = mean(brl_split), iso_split = mean(iso_split)) %>%
-    mutate(agg_total = ((2*xba) + (2*xwoba) + (2*xslg) + (2*barrel_pa) + (2*barrel_pct) + (2*hard_hit) + (2*max_ev) + (2*mean_ev) + (2*sweet_spot) + mean_ev_split + xba_split + woba_split + xwoba_split + brl_split + iso_split)) %>%
+    summarize(agg_index = mean(agg_index), barrel_pa = mean(barrel_pa), barrel_pct = mean(barrel_pct), hard_hit = mean(hard_hit), max_ev = mean(max_ev), mean_ev = mean(mean_ev), sweet_spot = mean(sweet_spot), xba = mean(xba), xwoba = mean(xwoba), xslg = mean(xslg), mean_ev_split = mean(mean_ev_split), xba_split = mean(xba_split), woba_split = mean(woba_split), xwoba_split = mean(xwoba_split), brl_split = mean(brl_split), iso_split = mean(iso_split)) %>%
     ungroup() %>%
     mutate_if(is.numeric, round, 2) %>%
-    mutate(Rank = rank(agg_total)) %>%
+    mutate(Rank = rank(agg_index)) %>%
     arrange(Rank) %>%
-    select(Pitcher = pitcher, pitcher_id, Team = pitcher_team, Opponent = batter_team, xba, xwoba, xslg, barrel_pa, barrel_pct, hard_hit, max_ev, mean_ev, sweet_spot, mean_ev_split, xba_split, woba_split, xwoba_split, brl_split, iso_split, agg_total, Rank) %>%
+    select(Pitcher = pitcher, pitcher_id, Team = pitcher_team, Opponent = batter_team, agg_index, xba, xwoba, xslg, barrel_pa, barrel_pct, hard_hit, max_ev, mean_ev, sweet_spot, mean_ev_split, xba_split, woba_split, xwoba_split, brl_split, iso_split, Rank) %>%
     inner_join(clean_pitchers, by = c('Pitcher' = 'pitcher_name', "Team" = 'pitcher_team', 'pitcher_id')) %>%
+    mutate(salary_rank = round(rank(desc(pitcher_salary)),0)) %>%
+    mutate(value_rank = rank(desc(salary_rank/Rank))) %>%
     mutate(Price = dollar(as.numeric(pitcher_salary))) %>%
-    mutate(Value = round((pitcher_salary)/agg_total,2)) %>%
-    select(Pitcher, Price, Team, Opponent, xba, xwoba, xslg, barrel_pa, barrel_pct, hard_hit, max_ev, mean_ev, sweet_spot, mean_ev_split, xba_split, woba_split, xwoba_split, brl_split, iso_split, agg_total, Rank, Value) %>%
+    select(Pitcher, Price, Team, Opponent, agg_index, agg_index, salary_rank, xba, xwoba, xslg, barrel_pa, barrel_pct, hard_hit, max_ev, mean_ev, sweet_spot, mean_ev_split, xba_split, woba_split, xwoba_split, brl_split, iso_split, Rank, value_rank) %>%
+    select(Pitcher, Team = Opponent, Price, agg_index, Rank, salary_rank, value_rank) %>%
     mutate(Rank = round(Rank,0)) %>%
-    arrange(Rank) %>%
-    gt() %>%
-    gt_color_rows(xba:Rank, palette = "RColorBrewer::Reds") %>%
-    tab_header(title = glue('Pitcher Averages for {date_of_game}'))
+    arrange(Rank) 
+  
+  # %>%
+  #   gt() %>%
+  #   gt_color_rows(xba:Rank, palette = "RColorBrewer::Reds") %>%
+  #   tab_header(title = glue('Pitcher Averages for {date_of_game}'))
   
   return(pitcher_aggs)
 }
 
 positions_list <- c('','C','1B','2B','3B','SS','OF')
-
-positions <- function(position_choice = c('C','1B','2B','3B','SS','OF'), difference = 20) {
-  
-  # put a table next to it or something so we have both
-  
-  # position_choice = '2B'
-  # difference = 20
-  
-  position_players <- whole_day_stats %>%
-    filter(grepl(paste(position_choice,collapse="|"), position)) %>%
-    mutate_if(is.numeric, round, 2) %>%
-    mutate(agg_total = ((2*xba) + (2*xwoba) + (2*xslg) + (2*barrel_pa) + (2*barrel_pct) + (2*hard_hit) + (2*max_ev) + (2*mean_ev) + (2*sweet_spot) + mean_ev_split + xba_split + woba_split + xwoba_split + brl_split + iso_split)) %>%
-    mutate(Rank = rank(desc(agg_total))) %>%
-    mutate(salary_rank = round(rank(desc(batter_salary)),0)) %>%
-    mutate(agg_rank = Rank) %>%
-    mutate(dollar_per_agg = round((batter_salary)/agg_total,2)) %>%
-    mutate(fd_difference = salary_rank - agg_rank) %>%
-    mutate(difference_rank = rank(agg_rank - salary_rank)) %>%
-    mutate(value_rank = rank(agg_rank)) %>%
-    mutate(number = rank(difference_rank))
-  
-  label_rows <- position_players %>%
-    filter(rank(value_rank) <= difference | rank(desc(value_rank)) <= difference)
-  
-  rank_salary <- ggplot(position_players, aes(x = agg_rank, y = salary_rank)) + geom_point() + geom_text_repel(data = label_rows, aes(label = glue('{batter}: {dollar_per_agg}'))) + scale_x_reverse() + scale_y_reverse() + labs(title = glue('{position_choice} Breakdown'), subtitle = glue('Top and Bottom {difference} Values are Labeled'), caption = 'Data taken from baseballr package, Chart made by @matt12oneil')
-  
-  
-  
-  return(rank_salary)
-}
 
 positions_table <- function(position_choice = c('C','1B','2B','3B','SS','OF'), difference = 25) {
   
@@ -413,18 +401,19 @@ positions_table <- function(position_choice = c('C','1B','2B','3B','SS','OF'), d
   position_players <- whole_day_stats %>%
     filter(grepl(paste(position_choice,collapse="|"), position)) %>%
     mutate_if(is.numeric, round, 2) %>%
-    mutate(agg_total = ((2*xba) + (2*xwoba) + (2*xslg) + (2*barrel_pa) + (2*barrel_pct) + (2*hard_hit) + (2*max_ev) + (2*mean_ev) + (2*sweet_spot) + mean_ev_split + xba_split + woba_split + xwoba_split + brl_split + iso_split)) %>%
-    mutate(Rank = rank(desc(agg_total))) %>%
+    mutate(Rank = rank(desc(agg_index))) %>%
     mutate(salary_rank = round(rank(desc(batter_salary)),0)) %>%
-    mutate(dollar_per_agg = round((batter_salary)/agg_total,2)) %>%
+    mutate(dollar_per_agg = round((batter_salary)/agg_index,2)) %>%
     mutate(value_rank = rank(desc(salary_rank/Rank))) %>%
-    select(batter, batter_team, batter_salary, pitcher, pitcher_team, agg_total, Rank, salary_rank, value_rank) %>%
-    arrange(value_rank) %>%
+    select(batter, batter_team, batter_salary, pitcher, pitcher_team, agg_index, Rank, salary_rank, value_rank) %>%
+    arrange(Rank) %>%
     mutate_if(is.numeric, round, 0) %>%
     mutate(value = round(salary_rank/Rank,2)) %>%
-    select(-value_rank) %>%
-    gt() %>%
-    gt_color_rows(agg_total:value, palette = "grDevices::blues9")
+    select(Batter = batter, Team = batter_team, Salary = batter_salary, Pitcher = pitcher, Opponent = pitcher_team, agg_index, Rank, salary_rank, value_rank)
+  
+  # %>%
+  #   gt() %>%
+  #   gt_color_rows(agg_total:value, palette = "grDevices::blues9")
   
   
   
@@ -449,43 +438,34 @@ ui = fluidPage(
       tabPanel('Fanduel Batters',
                DT::dataTableOutput("all_data"
                )), 
-      tabPanel("C/1B Breakdown", 
-               #plotOutput(outputId = 'c_1b'),
-               br(),
-               br(),
-               gt_output(outputId = 'c_1b_gt')
+      tabPanel("C/1B Breakdown",
+               #gt_output(outputId = 'c_1b_gt')
+               DT::dataTableOutput("c_1b_dt")
       ),
       tabPanel("2B Breakdown", 
-               #plotOutput(outputId = 'second'),
-               br(),
-               br(),
-               gt_output(outputId = 'second_gt')
+               #gt_output(outputId = 'second_gt')
+               DT::dataTableOutput("second_dt")
       ),
       tabPanel("3B Breakdown", 
-               #plotOutput(outputId = 'third'),
-               br(),
-               br(),
-               gt_output(outputId = 'third_gt')
+               #gt_output(outputId = 'third_gt')
+               DT::dataTableOutput("third_dt")
       ),
       tabPanel("SS Breakdown", 
-               #plotOutput(outputId = 'short'),
-               br(),
-               br(),
-               gt_output(outputId = 'ss_gt')
+               #gt_output(outputId = 'ss_gt')
+               DT::dataTableOutput("ss_dt")
       ),
-      tabPanel("OF Breakdown", 
-               #plotOutput(outputId = 'of'),
-               br(),
-               br(),
-               gt_output(outputId = 'of_gt')
+      tabPanel("OF Breakdown",
+               #gt_output(outputId = 'of_gt')
+               DT::dataTableOutput("of_dt")
       ),
       tabPanel("Position Players Breakdown", 
-               #plotOutput(outputId = 'all'),
-               br(),
-               br(),
-               gt_output(outputId = 'all_gt')
+               #gt_output(outputId = 'all_gt')
+               DT::dataTableOutput("all_dt")
       ),
-      tabPanel("Pitchers", gt_output(outputId = 'pitchers'))
+      tabPanel("Pitchers", 
+               #gt_output(outputId = 'pitchers')
+               DT::dataTableOutput("pitchers")
+               )
       # tabPanel("Reactive GG", 
       #          numericInput(inputId = 'number_choice'),
       #          selectInput('Positions','Choose Position(s)',positions, multiple = T),
@@ -511,45 +491,45 @@ server <- function(input, output) {
   output$all_data <- DT::renderDataTable(
     player_stats, options = list(pageLength = 35)
   )
-  output$pitchers <- render_gt(
-    pitcher_stats()
+  output$pitchers <- DT::renderDataTable(
+    pitcher_stats(), options = list(pageLength = 30)
   )
-  output$c_1b <- renderPlot(
-    positions(position_choice = c('C','1B'), difference = 12)
+  output$c_1b_dt <- DT::renderDataTable(
+    positions_table(position_choice = c('C','1B'), difference = 25), options = list(pageLength = 25)
   )
-  output$second <- renderPlot(
-    positions(position_choice = '2B', difference = 10)
+  output$second_dt <- DT::renderDataTable(
+    positions_table(position_choice = '2B', difference = 25), options = list(pageLength = 25)
   )
-  output$third <- renderPlot(
-    positions(position_choice = '3B', difference = 10)
+  output$third_dt <- DT::renderDataTable(
+    positions_table(position_choice = '3B', difference = 25), options = list(pageLength = 25)
   )
-  output$short <- renderPlot(
-    positions(position_choice = 'SS', difference = 10)
+  output$ss_dt <- DT::renderDataTable(
+    positions_table(position_choice = 'SS', difference = 25), options = list(pageLength = 25)
   )
-  output$of <- renderPlot(
-    positions(position_choice = 'OF', difference = 15)
+  output$of_dt <- DT::renderDataTable(
+    positions_table(position_choice = 'OF', difference = 25), options = list(pageLength = 25)
   )
-  output$all <- renderPlot(
-    positions()
+  output$all_dt <- DT::renderDataTable(
+    positions_table(), options = list(pageLength = 25)
   )
-  output$c_1b_gt <- render_gt(
-    positions_table(position_choice = c('C','1B'), difference = 25)
-  )
-  output$second_gt <- render_gt(
-    positions_table(position_choice = '2B', difference = 25)
-  )
-  output$third_gt <- render_gt(
-    positions_table(position_choice = '3B', difference = 25)
-  )
-  output$ss_gt <- render_gt(
-    positions_table(position_choice = 'SS', difference = 25)
-  )
-  output$of_gt <- render_gt(
-    positions_table(position_choice = 'OF', difference = 25)
-  )
-  output$all_gt <- render_gt(
-    positions_table()
-  )
+  # output$c_1b_gt <- render_gt(
+  #   positions_table(position_choice = c('C','1B'), difference = 25)
+  # )
+  # output$second_gt <- render_gt(
+  #   positions_table(position_choice = '2B', difference = 25)
+  # )
+  # output$third_gt <- render_gt(
+  #   positions_table(position_choice = '3B', difference = 25)
+  # )
+  # output$ss_gt <- render_gt(
+  #   positions_table(position_choice = 'SS', difference = 25)
+  # )
+  # output$of_gt <- render_gt(
+  #   positions_table(position_choice = 'OF', difference = 25)
+  # )
+  # output$all_gt <- render_gt(
+  #   positions_table()
+  # )
   # output$reactive <- renderPlot({
   #   positions_reactive(input$Positions, input$number_choice)}
   # )
