@@ -325,7 +325,8 @@ teams <- players %>%
 player_stats <- whole_day_stats %>%
   mutate_if(is.numeric, round, 2) %>%
   arrange(desc(agg_index)) %>%
-  select(batter, team = batter_team, salary = batter_salary, position, agg = agg_index, xba, xslg, xwoba, brl_pa = barrel_pa, brl_pct =  barrel_pct, hard_hit, sweet_spot, xba_split, xwoba_split, brl_split)
+  select(batter, team = batter_team, salary = batter_salary, position, agg = agg_index, xba, xslg, xwoba, brl_pa = barrel_pa, brl_pct =  barrel_pct, hard_hit, sweet_spot, xba_split, xwoba_split, brl_split) %>%
+  mutate(salary = dollar(as.numeric(salary)))
 
 lineup_stats <- function(team_name){
   
@@ -349,6 +350,7 @@ lineup_stats <- function(team_name){
     select(Batter = batter, Pitcher = pitcher, Salary = batter_salary, agg_index, xba, xwoba, xslg, barrel_pa, barrel_pct, hard_hit, max_ev, mean_ev, sweet_spot, mean_ev_split, xba_split, woba_split, xwoba_split, brl_split, iso_split) %>%
     mutate_if(is.numeric,round,2) %>%
     arrange(desc(agg_index)) %>%
+    mutate(Salary = dollar(as.numeric(Salary))) %>%
     select(Batter, Pitcher, Salary, agg = agg_index, xba, xslg, xwoba, brl_pa = barrel_pa, brl_pct = barrel_pct, hard_hit, sweet_spot, xba_split, xwoba_split, brl_split) %>%
     gt() %>%
     gt_merge_stack(col1 = Batter, Pitcher) %>%
@@ -379,7 +381,7 @@ pitcher_stats <- function() {
     mutate(value_rank = rank(desc(salary_rank/Rank))) %>%
     mutate(Price = dollar(as.numeric(pitcher_salary))) %>%
     select(Pitcher, Price, Team, Opponent, agg_index, agg_index, salary_rank, xba, xwoba, xslg, barrel_pa, barrel_pct, hard_hit, max_ev, mean_ev, sweet_spot, mean_ev_split, xba_split, woba_split, xwoba_split, brl_split, iso_split, Rank, value_rank) %>%
-    select(Pitcher, Team = Opponent, Price, agg_index, Rank, salary_rank, value_rank) %>%
+    select(Pitcher, Team = Opponent, Price, agg_index, Rank, `Salary Rank` = salary_rank, `Value Rank` = value_rank) %>%
     mutate(Rank = round(Rank,0)) %>%
     arrange(Rank) 
   
@@ -409,7 +411,8 @@ positions_table <- function(position_choice = c('C','1B','2B','3B','SS','OF'), d
     arrange(Rank) %>%
     mutate_if(is.numeric, round, 0) %>%
     mutate(value = round(salary_rank/Rank,2)) %>%
-    select(Batter = batter, Team = batter_team, Salary = batter_salary, Pitcher = pitcher, Opponent = pitcher_team, agg_index, Rank, salary_rank, value_rank)
+    select(Batter = batter, Team = batter_team, Salary = batter_salary, Pitcher = pitcher, Opponent = pitcher_team, agg_index, Rank, `Salary Rank` = salary_rank, `Value Rank` = value_rank) %>%
+    mutate(Salary = dollar(as.numeric(Salary))) %>%
   
   # %>%
   #   gt() %>%
@@ -432,31 +435,15 @@ ui = fluidPage(
                                       label = 'Select a Team'
       ),
       gt_output(outputId = "team1")),
-      tabPanel('Batter Index',
-               DT::dataTableOutput("batter_index"
-               )), 
       tabPanel('Fanduel Batters',
                DT::dataTableOutput("all_data"
                )), 
-      tabPanel("C/1B Breakdown",
-               #gt_output(outputId = 'c_1b_gt')
-               DT::dataTableOutput("c_1b_dt")
-      ),
-      tabPanel("2B Breakdown", 
+      tabPanel("Position Breakdown", selectInput("position1",
+                                           choices =  positions_list,
+                                           multiple = TRUE,
+                                           label = 'Select a Position'), 
                #gt_output(outputId = 'second_gt')
-               DT::dataTableOutput("second_dt")
-      ),
-      tabPanel("3B Breakdown", 
-               #gt_output(outputId = 'third_gt')
-               DT::dataTableOutput("third_dt")
-      ),
-      tabPanel("SS Breakdown", 
-               #gt_output(outputId = 'ss_gt')
-               DT::dataTableOutput("ss_dt")
-      ),
-      tabPanel("OF Breakdown",
-               #gt_output(outputId = 'of_gt')
-               DT::dataTableOutput("of_dt")
+               DT::dataTableOutput("position_dt")
       ),
       tabPanel("Position Players Breakdown", 
                #gt_output(outputId = 'all_gt')
@@ -485,54 +472,26 @@ server <- function(input, output) {
   output$team1 <- render_gt(
     lineup_stats(input$team1)
   )
-  output$batter_index <- DT::renderDataTable(
-    batters_statcast, options = list(pageLength = 35)
-  )
   output$all_data <- DT::renderDataTable(
-    player_stats, options = list(pageLength = 35)
+    player_stats, options = list(pageLength = 35, 
+                                   autoWidth = TRUE,
+                                   columnDefs = list(list(width = '10px',className = 'dt-center', targets = "_all")))
   )
   output$pitchers <- DT::renderDataTable(
-    pitcher_stats(), options = list(pageLength = 30)
+    pitcher_stats(), options = list(pageLength = 30,
+                                    autoWidth = TRUE,
+                                    columnDefs = list(list(width = '10px',className = 'dt-center', targets = "_all")))
   )
-  output$c_1b_dt <- DT::renderDataTable(
-    positions_table(position_choice = c('C','1B'), difference = 25), options = list(pageLength = 25)
-  )
-  output$second_dt <- DT::renderDataTable(
-    positions_table(position_choice = '2B', difference = 25), options = list(pageLength = 25)
-  )
-  output$third_dt <- DT::renderDataTable(
-    positions_table(position_choice = '3B', difference = 25), options = list(pageLength = 25)
-  )
-  output$ss_dt <- DT::renderDataTable(
-    positions_table(position_choice = 'SS', difference = 25), options = list(pageLength = 25)
-  )
-  output$of_dt <- DT::renderDataTable(
-    positions_table(position_choice = 'OF', difference = 25), options = list(pageLength = 25)
+  output$position_dt <- DT::renderDataTable(
+    positions_table(position_choice = input$position1, difference = 25), options = list(pageLength = 25, 
+                                                                             autoWidth = TRUE,
+                                                                             columnDefs = list(list(width = '10px',className = 'dt-center', targets = "_all")))
   )
   output$all_dt <- DT::renderDataTable(
-    positions_table(), options = list(pageLength = 25)
+    positions_table(), options = list(pageLength = 25, 
+                                      autoWidth = TRUE,
+                                      columnDefs = list(list(width = '10px',className = 'dt-center', targets = "_all")))
   )
-  # output$c_1b_gt <- render_gt(
-  #   positions_table(position_choice = c('C','1B'), difference = 25)
-  # )
-  # output$second_gt <- render_gt(
-  #   positions_table(position_choice = '2B', difference = 25)
-  # )
-  # output$third_gt <- render_gt(
-  #   positions_table(position_choice = '3B', difference = 25)
-  # )
-  # output$ss_gt <- render_gt(
-  #   positions_table(position_choice = 'SS', difference = 25)
-  # )
-  # output$of_gt <- render_gt(
-  #   positions_table(position_choice = 'OF', difference = 25)
-  # )
-  # output$all_gt <- render_gt(
-  #   positions_table()
-  # )
-  # output$reactive <- renderPlot({
-  #   positions_reactive(input$Positions, input$number_choice)}
-  # )
 }
 shinyApp(ui = ui, server = server) 
 
