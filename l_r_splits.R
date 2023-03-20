@@ -77,7 +77,6 @@ write.csv(batters, "/Users/mattoneil/Documents/MO/Lineups/batters_22_splits.csv"
 write.csv(pitchers, "/Users/mattoneil/Documents/MO/Lineups/pitchers_22_splits.csv", row.names=FALSE)
 
 
-root <- "~/myproject" 
-write_vc(batters, file = "/batters_22_splits", root = 'matt12oneil/Lineups')
+
 
 
