@@ -3,7 +3,15 @@
 #potentially switch index and all batters pages to reactable instead of datatable
 #maximize the total agg in terms of dollars
 #add in runs total rank by team
-#add in strikeouts total by pitcher
+#add in strikeouts total by pitcher by sportsbooks
+#add in projected runs and total innings pitched by sportsbooks
+
+### can basically use these three links to put together total points for each pitcher and combine it with the agg_index
+#https://www.actionnetwork.com/mlb/props/earned-runs
+#https://www.actionnetwork.com/mlb/props/strikeouts
+#https://www.actionnetwork.com/mlb/props/pitching-outs
+#https://www.bettingpros.com/mlb/picks/prop-bets/
+
 
 
 pacman::p_load(shiny,shiny,tidyverse,dplyr,formattable,gtExtras,rsconnect,baseballr,retrosheet,gt,stringr,janitor,DT,furrr,data.table,readxl,scales,shinyWidgets,lubridate,ggrepel,rvest,XML,httr,jsonlite,lpSolve,tidytable, glue)
@@ -313,9 +321,9 @@ whole_day_stats <- players %>%
          , xwoba_split = (batter_xwoba_split + pitcher_xwoba_split)/2 * park_factors
          , brl_split = (batter_brl_split + pitcher_brl_split)/2 * park_factors
          , iso_split = (batter_iso_split + pitcher_iso_split)/2 * park_factors) %>%
-  mutate(agg_total = ((xba) + (xwoba) + (xslg) + (barrel_pa) + (barrel_pct) + (hard_hit) + (max_ev) + (mean_ev) + (sweet_spot) + mean_ev_split + xba_split + woba_split + xwoba_split + brl_split + iso_split)) %>%
+  mutate(agg_total = ((.5*xba) + (.5*xwoba) + (xslg) + (.25*barrel_pa) + (.25*barrel_pct) + (hard_hit) + (.25*max_ev) + (.25*mean_ev) + (sweet_spot) + (.5*mean_ev_split) + (.5*xba_split) + (.5*xwoba_split) + (.5*brl_split) + (iso_split))) %>%
   mutate(agg_index = round(agg_total/mean(agg_total)*100,2)) %>%
-  select(batter_id, batter = player_name, batter_team = team, batter_salary = salary, position, pitcher_id, pitcher = pitcher_name, pitcher_team = opponent, pitcher_salary, p_throws, batter_stand = stand, agg_index, xslg, xwoba, xba, barrel_pa, barrel_pct, hard_hit, mean_ev, max_ev, sweet_spot, mean_ev_split, xba_split, woba_split, xwoba_split, brl_split, iso_split) %>%
+  select(batter_id, batter = player_name, batter_team = team, batter_salary = salary, position, pitcher_id, pitcher = pitcher_name, pitcher_team = opponent, pitcher_salary, p_throws, batter_stand = stand, agg_index, xslg, xwoba, xba, barrel_pa, barrel_pct, hard_hit, mean_ev, max_ev, sweet_spot, mean_ev_split, xba_split, xwoba_split, brl_split, iso_split) %>%
   filter(position != 'P')
 
 teams <- players %>%
@@ -347,7 +355,7 @@ lineup_stats <- function(team_name){
   
   
   all_matchups <- order %>%
-    select(Batter = batter, Pitcher = pitcher, Salary = batter_salary, agg_index, xba, xwoba, xslg, barrel_pa, barrel_pct, hard_hit, max_ev, mean_ev, sweet_spot, mean_ev_split, xba_split, woba_split, xwoba_split, brl_split, iso_split) %>%
+    select(Batter = batter, Pitcher = pitcher, Salary = batter_salary, agg_index, xba, xwoba, xslg, barrel_pa, barrel_pct, hard_hit, max_ev, mean_ev, sweet_spot, mean_ev_split, xba_split, xwoba_split, brl_split, iso_split) %>%
     mutate_if(is.numeric,round,2) %>%
     arrange(desc(agg_index)) %>%
     mutate(Salary = dollar(as.numeric(Salary))) %>%
@@ -370,17 +378,17 @@ pitcher_stats <- function() {
     
   pitcher_aggs <- whole_day_stats %>%
     group_by(pitcher, pitcher_id, pitcher_team, batter_team, pitcher_team) %>%
-    summarize(agg_index = mean(agg_index), barrel_pa = mean(barrel_pa), barrel_pct = mean(barrel_pct), hard_hit = mean(hard_hit), max_ev = mean(max_ev), mean_ev = mean(mean_ev), sweet_spot = mean(sweet_spot), xba = mean(xba), xwoba = mean(xwoba), xslg = mean(xslg), mean_ev_split = mean(mean_ev_split), xba_split = mean(xba_split), woba_split = mean(woba_split), xwoba_split = mean(xwoba_split), brl_split = mean(brl_split), iso_split = mean(iso_split)) %>%
+    summarize(agg_index = mean(agg_index), barrel_pa = mean(barrel_pa), barrel_pct = mean(barrel_pct), hard_hit = mean(hard_hit), max_ev = mean(max_ev), mean_ev = mean(mean_ev), sweet_spot = mean(sweet_spot), xba = mean(xba), xwoba = mean(xwoba), xslg = mean(xslg), mean_ev_split = mean(mean_ev_split), xba_split = mean(xba_split), xwoba_split = mean(xwoba_split), brl_split = mean(brl_split), iso_split = mean(iso_split)) %>%
     ungroup() %>%
     mutate_if(is.numeric, round, 2) %>%
     mutate(Rank = rank(agg_index)) %>%
     arrange(Rank) %>%
-    select(Pitcher = pitcher, pitcher_id, Team = pitcher_team, Opponent = batter_team, agg_index, xba, xwoba, xslg, barrel_pa, barrel_pct, hard_hit, max_ev, mean_ev, sweet_spot, mean_ev_split, xba_split, woba_split, xwoba_split, brl_split, iso_split, Rank) %>%
+    select(Pitcher = pitcher, pitcher_id, Team = pitcher_team, Opponent = batter_team, agg_index, xba, xwoba, xslg, barrel_pa, barrel_pct, hard_hit, max_ev, mean_ev, sweet_spot, mean_ev_split, xba_split, xwoba_split, brl_split, iso_split, Rank) %>%
     inner_join(clean_pitchers, by = c('Pitcher' = 'pitcher_name', "Team" = 'pitcher_team', 'pitcher_id')) %>%
     mutate(salary_rank = round(rank(desc(pitcher_salary)),0)) %>%
     mutate(value_rank = rank(desc(salary_rank/Rank))) %>%
     mutate(Price = dollar(as.numeric(pitcher_salary))) %>%
-    select(Pitcher, Price, Team, Opponent, agg_index, agg_index, salary_rank, xba, xwoba, xslg, barrel_pa, barrel_pct, hard_hit, max_ev, mean_ev, sweet_spot, mean_ev_split, xba_split, woba_split, xwoba_split, brl_split, iso_split, Rank, value_rank) %>%
+    select(Pitcher, Price, Team, Opponent, agg_index, agg_index, salary_rank, xba, xwoba, xslg, barrel_pa, barrel_pct, hard_hit, max_ev, mean_ev, sweet_spot, mean_ev_split, xba_split, xwoba_split, brl_split, iso_split, Rank, value_rank) %>%
     select(Pitcher, Team = Opponent, Price, agg_index, Rank, `Salary Rank` = salary_rank, `Value Rank` = value_rank) %>%
     mutate(Rank = round(Rank,0)) %>%
     arrange(Rank) 
@@ -409,7 +417,7 @@ positions_table <- function(position_choice = c('C','1B','2B','3B','SS','OF'), d
     mutate(value_rank = rank(desc(salary_rank/Rank))) %>%
     select(batter, batter_team, batter_salary, pitcher, pitcher_team, agg_index, Rank, salary_rank, value_rank) %>%
     arrange(Rank) %>%
-    mutate_if(is.numeric, round, 0) %>%
+    mutate_if(is.numeric, round, 2) %>%
     mutate(value = round(salary_rank/Rank,2)) %>%
     select(Batter = batter, Team = batter_team, Salary = batter_salary, Pitcher = pitcher, Opponent = pitcher_team, agg_index, Rank, `Salary Rank` = salary_rank, `Value Rank` = value_rank) %>%
     mutate(Salary = dollar(as.numeric(Salary))) %>%
@@ -430,25 +438,27 @@ ui = fluidPage(
   
   mainPanel(
     tabsetPanel(
-      tabPanel("Lineups", selectInput("team1",
+      tabPanel("All Batters", 
+               #gt_output(outputId = 'all_gt')
+               DT::dataTableOutput("all_dt")
+      ),
+      tabPanel("Batters by Position", selectInput("position1",
+                                                  choices =  positions_list,
+                                                  multiple = TRUE,
+                                                  label = 'Select a Position'), 
+               #gt_output(outputId = 'second_gt')
+               DT::dataTableOutput("position_dt")
+      ),
+      tabPanel('Batters with All Metrics',
+               DT::dataTableOutput("all_data"
+               )), 
+      tabPanel("Team Lineups", selectInput("team1",
                                       choices =  teams$team,
                                       label = 'Select a Team'
       ),
       gt_output(outputId = "team1")),
-      tabPanel('Fanduel Batters',
-               DT::dataTableOutput("all_data"
-               )), 
-      tabPanel("Position Breakdown", selectInput("position1",
-                                           choices =  positions_list,
-                                           multiple = TRUE,
-                                           label = 'Select a Position'), 
-               #gt_output(outputId = 'second_gt')
-               DT::dataTableOutput("position_dt")
-      ),
-      tabPanel("Position Players Breakdown", 
-               #gt_output(outputId = 'all_gt')
-               DT::dataTableOutput("all_dt")
-      ),
+      
+      
       tabPanel("Pitchers", 
                #gt_output(outputId = 'pitchers')
                DT::dataTableOutput("pitchers")
