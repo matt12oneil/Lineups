@@ -6,6 +6,10 @@
 #add in strikeouts total by pitcher by sportsbooks
 #add in projected runs and total innings pitched by sportsbooks
 
+#track how agg_index performs over time: 
+  #get daily box scores
+  #starting pitcher and compile agg_indexes for before that date, then calculate how well it correllates 
+
 ### can basically use these three links to put together total points for each pitcher and combine it with the agg_index
 #https://www.actionnetwork.com/mlb/props/earned-runs
 #https://www.actionnetwork.com/mlb/props/strikeouts
@@ -16,9 +20,9 @@
 
 pacman::p_load(shiny,shiny,tidyverse,dplyr,formattable,gtExtras,rsconnect,baseballr,retrosheet,gt,stringr,janitor,DT,furrr,data.table,readxl,scales,shinyWidgets,lubridate,ggrepel,rvest,XML,httr,jsonlite,lpSolve,tidytable, glue)
 
-devtools::install_github("camdenk/mlbplotR")
+#devtools::install_github("camdenk/mlbplotR")
 
-library(mlbplotR)
+#library(mlbplotR)
 
 #only take balls put in play
 valid_events <- c("single","double","triple","home_run","walk","strikeout","field_out","force_out","sac_fly","fielders_choice","grounded_into_double_play","fielders_choice_out","sac_bunt","field_error","hit_by_pitch","double_play","strikeout_double_play","other_out","triple_play","sac_bunt_double_play")
@@ -226,11 +230,11 @@ indexes_total <- batter_indexes %>%
   bind_rows(pitcher_indexes)
 
 #batter_splits vs. different handed pitchers
-batter_splits <- read_csv('https://raw.githubusercontent.com/matt12oneil/Lineups/master/batters_22_splits.csv') %>%
+batter_splits <- read_csv('https://raw.githubusercontent.com/matt12oneil/Lineups/updated_splits/batters_22_splits.csv') %>%
   mutate(mean_ev_index_split = avg_launch_speed/mean(avg_launch_speed, na.rm = T), brl_index_split = brl_pct/mean(brl_pct, na.rm = T), xba_index_split = xba/mean(xba, na.rm = T), woba_index_split = woba/mean(woba, na.rm = T), xwoba_index_split = xwoba/mean(xwoba, na.rm = T), iso_index_split = iso/mean(iso, na.rm = T)) %>%
   mutate(type = 'batter') %>%
   select(player_id = batter, stand, p_throws, type, mean_ev_index_split, brl_index_split, xba_index_split, woba_index_split, xwoba_index_split, iso_index_split)
-pitcher_splits <- read_csv('https://raw.githubusercontent.com/matt12oneil/Lineups/master/pitchers_22_splits.csv') %>%
+pitcher_splits <- read_csv('https://raw.githubusercontent.com/matt12oneil/Lineups/updated_splits/pitchers_22_splits.csv') %>%
   mutate(mean_ev_index_split = avg_launch_speed/mean(avg_launch_speed, na.rm = T), brl_index_split = brl_pct/mean(brl_pct, na.rm = T), xba_index_split = xba/mean(xba, na.rm = T), woba_index_split = woba/mean(woba, na.rm = T), xwoba_index_split = xwoba/mean(xwoba, na.rm = T), iso_index_split = iso/mean(iso, na.rm = T)) %>%
   mutate(type = 'pitcher') %>%
   select(player_id = pitcher, stand, p_throws, type, mean_ev_index_split, brl_index_split, xba_index_split, woba_index_split, xwoba_index_split, iso_index_split)

@@ -1,31 +1,5 @@
-library(shiny)
-library(glue)
-library(tidyverse)
-library(dplyr)
-library(formattable)
-library(gtExtras)
-library(rsconnect)
-library(baseballr)
-library(retrosheet)
-library(gt)
-library(stringr)
-library(janitor)
-library(DT)
-library(furrr)
-library(data.table)
-library(readxl)
-library(scales)
-library(tidytable)
-library(shinyWidgets)
-library(lubridate)
-library(ggrepel)
-library(rvest)
-library(XML)
-library(httr)
-library(jsonlite)
-library(lpSolve)
-library(git2rdata)
-library(git2r)
+pacman::p_load(tidyverse,dplyr,formattable,gtExtras,rsconnect,baseballr,retrosheet,gt,stringr,janitor,DT,furrr,data.table,readxl,scales,shinyWidgets,lubridate,ggrepel,rvest,XML,httr,jsonlite,lpSolve,tidytable, glue,piggyback)
+
 devtools::install_github("BillPetti/baseballr", ref = "development_branch")
 
 tictoc::tic()
@@ -33,7 +7,7 @@ tictoc::tic()
 
 
 days <- mlb_schedule(season = 2022, level_ids = '1') %>%
-  filter(series_description == 'Regular Season') %>%
+  filter(series_description == 'Regular Season' & date <= Sys.Date()) %>%
   distinct(date)
 colnames(days) <- 'day'
 
@@ -76,6 +50,19 @@ pitchers <- events %>%
 write.csv(batters, "/Users/mattoneil/Documents/MO/Lineups/batters_22_splits.csv", row.names=FALSE)
 write.csv(pitchers, "/Users/mattoneil/Documents/MO/Lineups/pitchers_22_splits.csv", row.names=FALSE)
 
+
+
+pb_upload(file = "batters_22_splits.csv", 
+          repo = "matt12oneil/Lineups",
+          name = "batters_22_splits.csv",
+          tag = "updated_splits",
+          .token = gh::gh_token())
+
+pb_upload(file = "pitchers_22_splits.csv", 
+          repo = "matt12oneil/Lineups",
+          name = "pitchers_22_splits.csv",
+          tag = "updated_splits",
+          .token = gh::gh_token())
 
 
 
