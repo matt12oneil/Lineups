@@ -8,7 +8,10 @@
 
 #track how agg_index performs over time: 
   #get daily box scores
-  #starting pitcher and compile agg_indexes for before that date, then calculate how well it correllates 
+  #starting pitcher and compile agg_indexes for before that date, then calculate how well it correlates
+  #mlb_player_game_stats(person_id = NULL, game_pk = NULL)
+  #mlb_probables(game_id = 566001)
+  #mlb_schedule(season = 2022, level_ids = "1")
 
 ### can basically use these three links to put together total points for each pitcher and combine it with the agg_index
 #https://www.actionnetwork.com/mlb/props/earned-runs
