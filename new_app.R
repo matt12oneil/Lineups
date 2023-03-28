@@ -285,6 +285,7 @@ salary <- read_csv('https://raw.githubusercontent.com/matt12oneil/Lineups/master
   janitor::clean_names() %>%
   filter(is.na(injury_indicator)) %>%
   mutate(nickname = ifelse(nickname == 'Kike Hernandez' & team == 'BOS','Kiké Hernandez', nickname)) %>%
+  mutate(nickname = ifelse(nickname == 'Ji Man Choi','Ji-Man Choi', nickname)) %>%
   inner_join(rosters, by = c('nickname' = 'player_name')) %>%
   select(key_mlbam = player, id, position, nickname, salary, game, opponent, injury_indicator, injury_details, probable_pitcher, batting_order, roster_position, team, opponent) %>%
   inner_join(batters_statcast, by = c('key_mlbam' = 'player')) %>%
@@ -329,6 +330,7 @@ whole_day_stats <- players %>%
          , brl_split = (batter_brl_split + pitcher_brl_split)/2 * park_factors
          , iso_split = (batter_iso_split + pitcher_iso_split)/2 * park_factors) %>%
   mutate(agg_total = ((.5*xba) + (.5*xwoba) + (xslg) + (.25*barrel_pa) + (.25*barrel_pct) + (hard_hit) + (.25*max_ev) + (.25*mean_ev) + (sweet_spot) + (.5*mean_ev_split) + (.5*xba_split) + (.5*xwoba_split) + (.5*brl_split) + (iso_split))) %>%
+  filter(!is.na(agg_total)) %>%
   mutate(agg_index = round(agg_total/mean(agg_total)*100,2)) %>%
   select(batter_id, batter = player_name, batter_team = team, batter_salary = salary, position, pitcher_id, pitcher = pitcher_name, pitcher_team = opponent, pitcher_salary, p_throws, batter_stand = stand, agg_index, xslg, xwoba, xba, barrel_pa, barrel_pct, hard_hit, mean_ev, max_ev, sweet_spot, mean_ev_split, xba_split, xwoba_split, brl_split, iso_split) %>%
   filter(position != 'P')
@@ -396,7 +398,7 @@ pitcher_stats <- function() {
     mutate(value_rank = rank(desc(salary_rank/Rank))) %>%
     mutate(Price = dollar(as.numeric(pitcher_salary))) %>%
     select(Pitcher, Price, Team, Opponent, agg_index, agg_index, salary_rank, xba, xwoba, xslg, barrel_pa, barrel_pct, hard_hit, max_ev, mean_ev, sweet_spot, mean_ev_split, xba_split, xwoba_split, brl_split, iso_split, Rank, value_rank) %>%
-    select(Pitcher, Team = Opponent, Price, agg_index, Rank, `Salary Rank` = salary_rank, `Value Rank` = value_rank) %>%
+    select(Pitcher, Team, Opponent, Price, agg_index, Rank, `Salary Rank` = salary_rank, `Value Rank` = value_rank) %>%
     mutate(Rank = round(Rank,0)) %>%
     arrange(Rank) 
   
@@ -422,11 +424,11 @@ positions_table <- function(position_choice = c('C','1B','2B','3B','SS','OF'), d
     mutate(salary_rank = round(rank(desc(batter_salary)),0)) %>%
     mutate(dollar_per_agg = round((batter_salary)/agg_index,2)) %>%
     mutate(value_rank = rank(desc(salary_rank/Rank))) %>%
-    select(batter, batter_team, batter_salary, pitcher, pitcher_team, agg_index, Rank, salary_rank, value_rank) %>%
+    select(batter, batter_team, position, batter_salary, pitcher, pitcher_team, agg_index, Rank, salary_rank, value_rank) %>%
     arrange(Rank) %>%
     mutate_if(is.numeric, round, 2) %>%
     mutate(value = round(salary_rank/Rank,2)) %>%
-    select(Batter = batter, Team = batter_team, Salary = batter_salary, Pitcher = pitcher, Opponent = pitcher_team, agg_index, Rank, `Salary Rank` = salary_rank, `Value Rank` = value_rank) %>%
+    select(Batter = batter, Team = batter_team, position, Salary = batter_salary, Pitcher = pitcher, Opponent = pitcher_team, agg_index, Rank, `Salary Rank` = salary_rank, `Value Rank` = value_rank) %>%
     mutate(Salary = dollar(as.numeric(Salary))) %>%
   
   # %>%
