@@ -13,7 +13,7 @@ library(furrr)
 days <- mlb_schedule(season = 2022, level_ids = '1') %>%
   filter(series_description == 'Regular Season' & date <= Sys.Date()) %>%
   distinct(date) %>%
-  filter(date <= '2022-04-30')
+  #filter(date <= '2022-04-30')
 colnames(days) <- 'day'
 
 all_events <- function(time){
