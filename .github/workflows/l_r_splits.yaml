@@ -1,9 +1,9 @@
 # Workflow derived from https://github.com/r-lib/actions/tree/v2/examples
 # Need help debugging build failures? Start at https://github.com/r-lib/actions#where-to-find-help
 on:
-  push:
-    branches: [main, master]
   pull_request:
+    branches: [main, master]
+  push:
     branches: [main, master]
   schedule:
     # https://crontab.guru/ - every day at 7am
@@ -54,6 +54,7 @@ jobs:
         run: |
           git config --local user.email "actions@github.com"
           git config --local user.name "GitHub Actions"
+          git pull 
           git add .
           git commit -m "Results from R script" || echo "No changes to commit"
           git push origin || echo "No changes to commit"
