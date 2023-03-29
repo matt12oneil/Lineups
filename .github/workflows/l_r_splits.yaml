@@ -1,9 +1,9 @@
 # Workflow derived from https://github.com/r-lib/actions/tree/v2/examples
 # Need help debugging build failures? Start at https://github.com/r-lib/actions#where-to-find-help
 on:
-  pull_request:
-    branches: [main, master]
   push:
+    branches: [main, master]
+  pull_request:
     branches: [main, master]
   schedule:
     # https://crontab.guru/ - every day at 7am
@@ -20,6 +20,9 @@ jobs:
       # that enables the machine
       # to access the code inside our repository
       - uses: actions/checkout@v3
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.ref }}
       # imports an action from another repository, 
       # that installs R on the machine
       - uses: r-lib/actions/setup-r@v2
