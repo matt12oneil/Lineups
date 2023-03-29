@@ -1,3 +1,8 @@
+install.packages("baseballr")
+install.packages("tidyverse")
+install.packages("tidytable")
+
+
 days <- mlb_schedule(season = 2022, level_ids = '1') %>%
   filter(series_description == 'Regular Season' & date <= Sys.Date()) %>%
   distinct(date)
