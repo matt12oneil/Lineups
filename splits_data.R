@@ -51,8 +51,8 @@ pitchers <- events %>%
   tidytable::group_by(pitcher, p_throws, stand) %>%
   tidytable::summarize(events = n(), avg_launch_speed = mean(launch_speed, na.rm = T), avg_launch_angle = mean(launch_angle, na.rm = T), xba = mean(estimated_ba_using_speedangle, na.rm = T), woba = mean(woba_value, na.rm = T), xwoba = mean(estimated_woba_using_speedangle, na.rm = T), iso = mean(iso_value,na.rm = T))
 
-readr::write_csv(batters,"batter_splits.csv")
-readr::write_csv(pitchers,"pitcher_splits.csv")
+readr::write_csv(batters,"splits_data/batter_splits.csv")
+readr::write_csv(pitchers,"splits_data/pitcher_splits.csv")
 
 
 
