@@ -42,14 +42,14 @@ events <- future_map_dfr(
 
 
 batters <- events %>%
-  #baseballr::code_barrel() %>%
+  baseballr::code_barrel() %>%
   tidytable::group_by(batter, player_name, stand, p_throws) %>%
-  tidytable::summarize(events = n(), avg_launch_speed = mean(launch_speed, na.rm = T), avg_launch_angle = mean(launch_angle, na.rm = T), xba = mean(estimated_ba_using_speedangle, na.rm = T), woba = mean(woba_value, na.rm = T), xwoba = mean(estimated_woba_using_speedangle, na.rm = T), iso = mean(iso_value,na.rm = T))
+  tidytable::summarize(events = n(), avg_launch_speed = mean(launch_speed, na.rm = T), avg_launch_angle = mean(launch_angle, na.rm = T), xba = mean(estimated_ba_using_speedangle, na.rm = T), woba = mean(woba_value, na.rm = T), xwoba = mean(estimated_woba_using_speedangle, na.rm = T), iso = mean(iso_value,na.rm = T), brl_pct = mean(barrel, na.rm = T))
 
 pitchers <- events %>%
-  #baseballr::code_barrel() %>%
+  baseballr::code_barrel() %>%
   tidytable::group_by(pitcher, p_throws, stand) %>%
-  tidytable::summarize(events = n(), avg_launch_speed = mean(launch_speed, na.rm = T), avg_launch_angle = mean(launch_angle, na.rm = T), xba = mean(estimated_ba_using_speedangle, na.rm = T), woba = mean(woba_value, na.rm = T), xwoba = mean(estimated_woba_using_speedangle, na.rm = T), iso = mean(iso_value,na.rm = T))
+  tidytable::summarize(events = n(), avg_launch_speed = mean(launch_speed, na.rm = T), avg_launch_angle = mean(launch_angle, na.rm = T), xba = mean(estimated_ba_using_speedangle, na.rm = T), woba = mean(woba_value, na.rm = T), xwoba = mean(estimated_woba_using_speedangle, na.rm = T), iso = mean(iso_value,na.rm = T), brl_pct = mean(barrel, na.rm = T))
 
 readr::write_csv(batters,"splits_data/batter_splits.csv")
 readr::write_csv(pitchers,"splits_data/pitcher_splits.csv")
