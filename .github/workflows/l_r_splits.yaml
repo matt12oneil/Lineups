@@ -13,6 +13,7 @@ jobs:
   run-r-script:
     runs-on: ubuntu-latest # use Ubuntu
     env:
+      token: ${{ secrets.GH_TOKEN }}
       # The GitHub token will be available 
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }} 
     steps:
