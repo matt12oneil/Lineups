@@ -57,8 +57,9 @@ jobs:
         run: |
           git config --local user.email "actions@github.com"
           git config --local user.name "GitHub Actions"  
-          git reset -- hard
           git pull origin
+          git stash push --include-untracked
           git commit -m "Results from R script" || echo "No changes to commit" 
+          git stash drop
           git add .
           git push origin || echo "No changes to commit"
