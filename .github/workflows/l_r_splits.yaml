@@ -7,7 +7,7 @@ on:
     branches: [main, master]
   schedule:
     # https://crontab.guru/ - every day at 7am
-    - cron:  '02 * * * *'
+    - cron:  '20 * * * *'
 
 jobs:
   run-r-script:
