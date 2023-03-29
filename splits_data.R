@@ -1,6 +1,11 @@
 install.packages("baseballr")
 install.packages("tidyverse")
 install.packages("tidytable")
+install.packages("magrittr")
+library(baseballr)
+library(tidyverse)
+library(tidytable)
+library(magrittr)
 
 
 days <- mlb_schedule(season = 2022, level_ids = '1') %>%
