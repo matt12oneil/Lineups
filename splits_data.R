@@ -39,7 +39,6 @@ events <- future_map_dfr(
 )
 
 
-tictoc::toc()
 
 batters <- events %>%
   baseballr::code_barrel() %>%
