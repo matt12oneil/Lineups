@@ -19,9 +19,7 @@ jobs:
       # imports an action from another repository, 
       # that enables the machine
       # to access the code inside our repository
-      - uses: actions/checkout@v3 
-        with:
-          token: ${{ secrets.GH_TOKEN }}
+      - uses: actions/checkout@v3
       # imports an action from another repository, 
       # that installs R on the machine
       - uses: r-lib/actions/setup-r@v2
