@@ -12,6 +12,7 @@
   #mlb_player_game_stats(person_id = NULL, game_pk = NULL)
   #mlb_probables(game_id = 566001)
   #mlb_schedule(season = 2022, level_ids = "1")
+  #https://billpetti.github.io/baseballr/reference/mlb_sky.html
 
 ### can basically use these three links to put together total points for each pitcher and combine it with the agg_index
 #https://www.actionnetwork.com/mlb/props/earned-runs
