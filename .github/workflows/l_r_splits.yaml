@@ -46,8 +46,8 @@ jobs:
         run: |
           git config --local user.email "actions@github.com"
           git config --local user.name "GitHub Actions"
-          git rm batter_splits.csv
-          git rm pitcher_splits.csv
+          git rm splits_data/batter_splits.csv
+          git rm splits_data/pitcher_splits.csv
           git commit -m "removed"
       - name: Execute Script
         # executes the RScript stored in the file
