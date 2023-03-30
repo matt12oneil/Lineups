@@ -41,6 +41,14 @@ jobs:
             any::knitr 
             any::baseballr
             any::tidytable
+            
+      - name: Remove old results
+        run: |
+          git config --local user.email "actions@github.com"
+          git config --local user.name "GitHub Actions"
+          git rm batter_splits.csv
+          git rm pitcher_splits.csv
+          git commit -m "removed"
       - name: Execute Script
         # executes the RScript stored in the file
         # 01-monitoring-quarto-repos/script.R
@@ -52,8 +60,6 @@ jobs:
         run: |
           git config --local user.email "actions@github.com"
           git config --local user.name "GitHub Actions"
-          git stash save ""
-          git pull origin
           git add .
           git commit -m "Results from R script" || echo "No changes to commit"
           git push origin || echo "No changes to commit"
