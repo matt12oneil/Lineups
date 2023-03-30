@@ -55,8 +55,8 @@ yy <- year(Sys.Date())
 mm <- month(Sys.Date())
 dd <- day(Sys.Date())
 
-readr::write_csv(batters,glue("splits_data/batter_splits_{yy}_{mm}_{dd}.csv"))
-readr::write_csv(pitchers,glue("splits_data/pitcher_splits_{yy}_{mm}_{dd}.csv"))
+readr::write_csv(batters,str_glue("splits_data/batter_splits_{yy}_{mm}_{dd}.csv"))
+readr::write_csv(pitchers,str_glue("splits_data/pitcher_splits_{yy}_{mm}_{dd}.csv"))
 
 
 
