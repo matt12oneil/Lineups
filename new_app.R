@@ -19,6 +19,8 @@
 #https://www.actionnetwork.com/mlb/props/strikeouts
 #https://www.actionnetwork.com/mlb/props/pitching-outs
 #https://www.bettingpros.com/mlb/picks/prop-bets/
+#https://www.scoresandodds.com/mlb/props
+
 
 
 
@@ -234,11 +236,11 @@ indexes_total <- batter_indexes %>%
   bind_rows(pitcher_indexes)
 
 #batter_splits vs. different handed pitchers
-batter_splits <- read_csv('https://raw.githubusercontent.com/matt12oneil/Lineups/updated_splits/batters_22_splits.csv') %>%
+batter_splits <- read_csv('https://raw.githubusercontent.com/matt12oneil/Lineups/master/splits_data/batter_splits_22.csv') %>%
   mutate(mean_ev_index_split = avg_launch_speed/mean(avg_launch_speed, na.rm = T), brl_index_split = brl_pct/mean(brl_pct, na.rm = T), xba_index_split = xba/mean(xba, na.rm = T), woba_index_split = woba/mean(woba, na.rm = T), xwoba_index_split = xwoba/mean(xwoba, na.rm = T), iso_index_split = iso/mean(iso, na.rm = T)) %>%
   mutate(type = 'batter') %>%
   select(player_id = batter, stand, p_throws, type, mean_ev_index_split, brl_index_split, xba_index_split, woba_index_split, xwoba_index_split, iso_index_split)
-pitcher_splits <- read_csv('https://raw.githubusercontent.com/matt12oneil/Lineups/updated_splits/pitchers_22_splits.csv') %>%
+pitcher_splits <- read_csv('https://raw.githubusercontent.com/matt12oneil/Lineups/master/splits_data/pitcher_splits_22.csv') %>%
   mutate(mean_ev_index_split = avg_launch_speed/mean(avg_launch_speed, na.rm = T), brl_index_split = brl_pct/mean(brl_pct, na.rm = T), xba_index_split = xba/mean(xba, na.rm = T), woba_index_split = woba/mean(woba, na.rm = T), xwoba_index_split = xwoba/mean(xwoba, na.rm = T), iso_index_split = iso/mean(iso, na.rm = T)) %>%
   mutate(type = 'pitcher') %>%
   select(player_id = pitcher, stand, p_throws, type, mean_ev_index_split, brl_index_split, xba_index_split, woba_index_split, xwoba_index_split, iso_index_split)
