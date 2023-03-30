@@ -26,14 +26,6 @@ jobs:
         with:
           # uses the RStudio Package Manager
           use-public-rspm: true
-      - uses: "finnp/create-file-action@master"
-        env:
-          FILE_NAME: str_glue("splits_data/batter_splits_{yy}_{mm}_{dd}.csv")
-          FILE_DATA: "" 
-      - uses: "finnp/create-file-action@master"
-        env:
-          FILE_NAME: str_glue("splits_data/pitcher_splits_{yy}_{mm}_{dd}.csv")
-          FILE_DATA: "" 
       # imports an action from another repository, 
       # that deals with the dependencies
       - uses: r-lib/actions/setup-r-dependencies@v2
