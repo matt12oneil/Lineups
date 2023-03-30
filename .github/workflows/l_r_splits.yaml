@@ -43,7 +43,7 @@ jobs:
         # executes the RScript stored in the file
         # 01-monitoring-quarto-repos/script.R
         run: |
-          Rscript "splits_data.R"                        
+          Rscript "splits_data_23.R"                        
         # save the results in the repository
         # using git in the command line
       - name: Commit results
