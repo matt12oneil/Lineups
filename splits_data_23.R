@@ -11,7 +11,7 @@ library(furrr)
 
 
 days <- mlb_schedule(season = 2023, level_ids = '1') %>%
-  filter(date < Sys.Date()) %>%
+  filter(series_description == 'Regular Season' & date <= Sys.Date()) %>%
   distinct(date)
   #filter(date <= '2022-04-15')
 colnames(days) <- 'day'
