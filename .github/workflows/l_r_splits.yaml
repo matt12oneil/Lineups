@@ -40,7 +40,7 @@ jobs:
         # 01-monitoring-quarto-repos/script.R
         run: |
           - uses: actions/checkout@v2
-          Rscript "splits_data_22.R"                        
+          Rscript "splits_data/splits_data_22.R"                        
         # save the results in the repository
         # using git in the command line
       - name: Commit results
