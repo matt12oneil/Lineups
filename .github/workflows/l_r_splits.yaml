@@ -1,6 +1,8 @@
 # Workflow derived from https://github.com/r-lib/actions/tree/v2/examples
 # Need help debugging build failures? Start at https://github.com/r-lib/actions#where-to-find-help
-on:
+on:  
+  push:
+    branches: [main, master]
   schedule:
     # https://crontab.guru/ - every day at 7am
     - cron:  '0 11 * * *'
@@ -39,6 +41,7 @@ jobs:
         # executes the RScript stored in the file
         # 01-monitoring-quarto-repos/script.R
         run: |
+          - uses: actions/checkout@v2
           Rscript "splits_data_23.R"                        
         # save the results in the repository
         # using git in the command line
