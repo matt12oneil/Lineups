@@ -41,7 +41,6 @@ jobs:
         # executes the RScript stored in the file
         # 01-monitoring-quarto-repos/script.R
         run: |
-          - uses: actions/checkout@v2
           Rscript "splits_data_23.R"                        
         # save the results in the repository
         # using git in the command line
