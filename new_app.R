@@ -116,7 +116,7 @@ clean_totals <- function(url) {
 
 #lines <- clean_totals(url)
 
-teams <- mlb_teams(season = 2022, sport_ids = c(1)) %>%
+teams <- mlb_teams(season = 2023, sport_ids = c(1)) %>%
   select(team_id, team_full_name, team_abbreviation)
 
 
@@ -132,7 +132,7 @@ rosters_func <- function(team) {
 rosters <- map_dfr(teams$team_id, rosters_func)
 
 #get the stadiums that each team plays in
-team_stadiums <- mlb_teams(season = 2021, sport_ids = c(1)) %>%
+team_stadiums <- mlb_teams(season = 2023, sport_ids = c(1)) %>%
   arrange(team_abbreviation) %>%
   select(team_name, team_abbreviation, venue_name) %>%
   mutate(team_name = ifelse(team_abbreviation == 'ARI', 'Diamondbacks', team_name)) %>%
@@ -148,7 +148,7 @@ park_factors <- fg_park(2022) %>%
 
 
 #clarify the season for the statcast data
-season = 2022
+season = 2023
 #what date for the app to be run
 date_of_game = Sys.Date()
 
@@ -158,9 +158,9 @@ xstats <- function(type, game_season){
   expected <- statcast_leaderboards(
     leaderboard = "expected_statistics",
     year = game_season,
-    abs = 25,
-    min_pa = 25,
-    min_pitches = 20,
+    abs = 1,
+    min_pa = 1,
+    min_pitches = 1,
     min_field = "q",
     min_run = 0,
     player_type = type,
@@ -187,9 +187,9 @@ ev <- function(type, game_season){
   ev_batters <- statcast_leaderboards(
     leaderboard = "exit_velocity_barrels",
     year = game_season,
-    abs = 25,
-    min_pa = 25,
-    min_pitches = 20,
+    abs = 5,
+    min_pa = 1,
+    min_pitches = 5,
     min_field = "q",
     min_run = 0,
     player_type = type,
@@ -226,7 +226,15 @@ pitchers_statcast <- statcast_combined("pitcher")
 
 indexes <-function(dt){
   index <- dt %>%
-    mutate(est_ba_index = est_ba/mean(est_ba), est_slg_index = est_slg/mean(est_slg), est_woba_index = est_woba/mean(est_woba), angle_sweet_spot_index = anglesweetspotpercent/mean(anglesweetspotpercent), max_hit_speed_index = max_hit_speed/mean(max_hit_speed), avg_hit_speed_index = avg_hit_speed/mean(avg_hit_speed), hard_hit_index = ev95percent/mean(ev95percent), brl_percent_index = brl_percent/mean(brl_percent), brl_pa_index = brl_pa/mean(brl_pa)) %>%
+    mutate(est_ba_index = est_ba/mean(est_ba, na.rm = T)
+           , est_slg_index = est_slg/mean(est_slg, na.rm = T)
+           , est_woba_index = est_woba/mean(est_woba, na.rm = T)
+           , angle_sweet_spot_index = anglesweetspotpercent/mean(anglesweetspotpercent, na.rm = T)
+           , max_hit_speed_index = max_hit_speed/mean(max_hit_speed, na.rm = T)
+           , avg_hit_speed_index = avg_hit_speed/mean(avg_hit_speed, na.rm = T)
+           , hard_hit_index = ev95percent/mean(ev95percent, na.rm = T)
+           , brl_percent_index = brl_percent/mean(brl_percent, na.rm = T)
+           , brl_pa_index = brl_pa/mean(brl_pa, na.rm = T)) %>%
     select(player_id, player_name, player_team, type, est_ba_index, est_slg_index, est_woba_index, angle_sweet_spot_index, max_hit_speed_index, avg_hit_speed_index, hard_hit_index, brl_percent_index, brl_pa_index) 
   return(index)
 }
@@ -240,7 +248,7 @@ batter_splits <- read_csv('https://raw.githubusercontent.com/matt12oneil/Lineups
   mutate(mean_ev_index_split = avg_launch_speed/mean(avg_launch_speed, na.rm = T), brl_index_split = brl_pct/mean(brl_pct, na.rm = T), xba_index_split = xba/mean(xba, na.rm = T), woba_index_split = woba/mean(woba, na.rm = T), xwoba_index_split = xwoba/mean(xwoba, na.rm = T), iso_index_split = iso/mean(iso, na.rm = T)) %>%
   mutate(type = 'batter') %>%
   select(player_id = batter, stand, p_throws, type, mean_ev_index_split, brl_index_split, xba_index_split, woba_index_split, xwoba_index_split, iso_index_split)
-pitcher_splits <- read_csv('https://raw.githubusercontent.com/matt12oneil/Lineups/master/splits_data/pitcher_splits_23.csv') %>%
+pitcher_splits <- read_csv('https://raw.githubusercontent.com/matt12oneil/Lineups/master/splits_data/pitcher_splits_22.csv') %>%
   mutate(mean_ev_index_split = avg_launch_speed/mean(avg_launch_speed, na.rm = T), brl_index_split = brl_pct/mean(brl_pct, na.rm = T), xba_index_split = xba/mean(xba, na.rm = T), woba_index_split = woba/mean(woba, na.rm = T), xwoba_index_split = xwoba/mean(xwoba, na.rm = T), iso_index_split = iso/mean(iso, na.rm = T)) %>%
   mutate(type = 'pitcher') %>%
   select(player_id = pitcher, stand, p_throws, type, mean_ev_index_split, brl_index_split, xba_index_split, woba_index_split, xwoba_index_split, iso_index_split)
@@ -262,9 +270,15 @@ pitcher_splits <- splits('pitcher')
 batters_statcast <- xstats_batters %>%
   left_join(rosters, by = c('player_id' = 'player')) %>%
   select(player = player_id, slg, est_slg, woba, est_woba, ba, est_ba) %>%
-  mutate(xslg_index = est_slg/mean(est_slg), xwoba_index = est_woba/mean(est_woba), xba_index = est_ba/mean(est_ba)) %>%
+  mutate(xslg_index = est_slg/mean(est_slg, na.rm = T), xwoba_index = est_woba/mean(est_woba, na.rm = T), xba_index = est_ba/mean(est_ba, na.rm = T)) %>%
   inner_join(ev_batters, by = c('player' = 'player_id')) %>%
-  mutate(player_name = paste0(first_name,' ',last_name), brl_pa_index = brl_pa/mean(brl_pa), brl_pct_index = brl_percent/mean(brl_percent), hard_hit_index = ev95percent/mean(ev95percent), max_ev_index = max_hit_speed/mean(max_hit_speed), mean_ev_index = avg_hit_speed/mean(avg_hit_speed), sweet_spot_index = anglesweetspotpercent/mean(anglesweetspotpercent)) %>%
+  mutate(player_name = paste0(first_name,' ',last_name)
+         , brl_pa_index = brl_pa/mean(brl_pa, na.rm = T)
+         , brl_pct_index = brl_percent/mean(brl_percent, na.rm = T)
+         , hard_hit_index = ev95percent/mean(ev95percent, na.rm = T)
+         , max_ev_index = max_hit_speed/mean(max_hit_speed, na.rm = T)
+         , mean_ev_index = avg_hit_speed/mean(avg_hit_speed, na.rm = T)
+         , sweet_spot_index = anglesweetspotpercent/mean(anglesweetspotpercent, na.rm = T)) %>%
   mutate(type = 'batter') %>%
   select(player, type, est_slg, slg, est_woba, woba, est_ba, ba, xslg_index, xwoba_index, xba_index, brl_pct_index, max_ev_index, mean_ev_index, sweet_spot_index) %>%
   inner_join(batter_splits, by = c('player' = 'player_id','type')) %>%
@@ -274,9 +288,15 @@ batters_statcast <- xstats_batters %>%
 pitchers_statcast <- xstats_pitchers %>%
   left_join(rosters, by = c('player_id' = 'player')) %>%
   select(player = player_id, slg, est_slg, woba, est_woba, ba, est_ba) %>%
-  mutate(xslg_index = est_slg/mean(est_slg), xwoba_index = est_woba/mean(est_woba), xba_index = est_ba/mean(est_ba)) %>%
+  mutate(xslg_index = est_slg/mean(est_slg, na.rm = T), xwoba_index = est_woba/mean(est_woba, na.rm = T), xba_index = est_ba/mean(est_ba, na.rm = T)) %>%
   inner_join(ev_pitchers, by = c('player' = 'player_id')) %>%
-  mutate(player_name = paste0(first_name,' ',last_name), brl_pa_index = brl_pa/mean(brl_pa), brl_pct_index = brl_percent/mean(brl_percent), hard_hit_index = ev95percent/mean(ev95percent), max_ev_index = max_hit_speed/mean(max_hit_speed), mean_ev_index = avg_hit_speed/mean(avg_hit_speed), sweet_spot_index = anglesweetspotpercent/mean(anglesweetspotpercent)) %>%
+  mutate(player_name = paste0(first_name,' ',last_name)
+         , brl_pa_index = brl_pa/mean(brl_pa, na.rm = T), 
+         brl_pct_index = brl_percent/mean(brl_percent, na.rm = T)
+         , hard_hit_index = ev95percent/mean(ev95percent, na.rm = T)
+         , max_ev_index = max_hit_speed/mean(max_hit_speed, na.rm = T)
+         , mean_ev_index = avg_hit_speed/mean(avg_hit_speed, na.rm = T)
+         , sweet_spot_index = anglesweetspotpercent/mean(anglesweetspotpercent, na.rm = T)) %>%
   mutate(type = 'pitcher') %>%
   select(player, type, est_slg, slg, est_woba, woba, est_ba, ba, xslg_index, xwoba_index, xba_index, brl_pct_index, max_ev_index, mean_ev_index, sweet_spot_index) %>%
   inner_join(pitcher_splits, by = c('player' = 'player_id','type')) %>%
