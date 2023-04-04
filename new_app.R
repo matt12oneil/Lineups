@@ -24,7 +24,7 @@
 
 
 
-pacman::p_load(shiny,shiny,tidyverse,dplyr,formattable,gtExtras,rsconnect,baseballr,retrosheet,gt,stringr,janitor,DT,furrr,data.table,readxl,scales,shinyWidgets,lubridate,ggrepel,rvest,XML,httr,jsonlite,lpSolve,tidytable, glue)
+pacman::p_load(shiny,shiny,tidyverse,dplyr,formattable,gtExtras,rsconnect,baseballr,retrosheet,gt,stringr,janitor,DT,furrr,data.table,readxl,scales,shinyWidgets,lubridate,ggrepel,rvest,XML,httr,jsonlite,lpSolve,tidytable, glue,oddsapiR)
 
 #devtools::install_github("camdenk/mlbplotR")
 
@@ -33,7 +33,8 @@ pacman::p_load(shiny,shiny,tidyverse,dplyr,formattable,gtExtras,rsconnect,baseba
 #only take balls put in play
 valid_events <- c("single","double","triple","home_run","walk","strikeout","field_out","force_out","sac_fly","fielders_choice","grounded_into_double_play","fielders_choice_out","sac_bunt","field_error","hit_by_pitch","double_play","strikeout_double_play","other_out","triple_play","sac_bunt_double_play")
 
-
+teams <- mlb_teams(season = 2023, sport_ids = c(1)) %>%
+  select(team_id, team_full_name, team_abbreviation)
 
 
 #fanduel results history
@@ -51,73 +52,54 @@ fd_history <- function(){
 
 
 
+
+
 #betting lines for over/under
-clean_totals <- function(url) {
+clean_totals <- function() {
   
-  url <- 'https://sportsdata.usatoday.com/baseball/mlb/odds'
+  team_abbreviations <- teams %>%
+    select(team_full_name, team_abbreviation)
   
-  WS <- read_html(url) %>%
-    html_nodes(xpath = '//*[@id="__next"]/div[5]/div[3]/div/div[1]/div[2]/div[2]') %>%
-    html_table()
+  totals <- toa_sports_odds(sport_key = 'baseball_mlb', 
+                            regions = 'us', 
+                            markets = 'totals', 
+                            odds_format = 'american',
+                            date_format = 'iso') %>%
+    filter(bookmaker == 'FanDuel' & outcomes_name == 'Over') %>%
+    separate(commence_time, into = c('date','game_time'), sep = 'T') %>%
+    mutate(game_time = str_sub(game_time,1,-2)) %>%
+    mutate(game_time = ymd_hms(paste(date, game_time))) %>%
+    mutate(game_time = date(game_time - hours(4))) %>%
+    filter(game_time == Sys.Date()) %>%
+    select(game_date = game_time, id, total = outcomes_point)
   
-  lines <- WS[[1]] %>%
-    janitor::clean_names() %>%
-    `colnames<-` (c('team','spread','money_line','total','garbage')) %>%
-    filter(spread != 'Spread') %>%
-    select(-c(garbage, spread)) %>%
-    mutate(money_line = as.numeric(money_line)) %>%
-    mutate(team = case_when(str_detect(team, 'Angels') ~ 'LAA',
-                            str_detect(team, 'Astros') ~ 'HOU',
-                            str_detect(team, 'Rangers') ~ 'TEX',
-                            str_detect(team, 'Mariners') ~ 'SEA',
-                            str_detect(team, 'Athletics') ~ 'OAK',
-                            str_detect(team, 'Dodgers') ~ 'LAD',
-                            str_detect(team, 'Padres') ~ 'SD',
-                            str_detect(team, 'Giants') ~ 'SF',
-                            str_detect(team, 'Rockies') ~ 'COL',
-                            str_detect(team, 'Diamondbacks') ~ 'ARI',
-                            str_detect(team, 'Guardians') ~ 'CLE',
-                            str_detect(team, 'Twins') ~ 'MIN',
-                            str_detect(team, 'White Sox') ~ 'CWS',
-                            str_detect(team, 'Tigers') ~ 'DET',
-                            str_detect(team, 'Royals') ~ 'KC',
-                            str_detect(team, 'Cubs') ~ 'CHC',
-                            str_detect(team, 'Pirates') ~ 'PIT',
-                            str_detect(team, 'Reds') ~ 'CIN',
-                            str_detect(team, 'Brewers') ~ 'MIL',
-                            str_detect(team, 'Cardinals') ~ 'STL',
-                            str_detect(team, 'Red Sox') ~ 'BOS',
-                            str_detect(team, 'Yankees') ~ 'NYY',
-                            str_detect(team, 'Rays') ~ 'TB',
-                            str_detect(team, 'Blue Jays') ~ 'TOR',
-                            str_detect(team, 'Orioles') ~ 'BAL',
-                            str_detect(team, 'Mets') ~ 'NYM',
-                            str_detect(team, 'Nationals') ~ 'WSH',
-                            str_detect(team, 'Phillies') ~ 'PHI',
-                            str_detect(team, 'Marlins') ~ 'MIA',
-                            str_detect(team, 'Braves') ~ 'ATL',
-                            TRUE ~ 'None'
-    )) %>%
-    mutate(implied_share = case_when(money_line < 0 ~ round((money_line/(money_line-100)),2),
-                                     TRUE ~ round((100/(money_line + 100)),2))) %>%
-    separate(total, into = c('garbage','total'), sep = ' ') %>%
-    select(-garbage) %>%
-    mutate(total = as.numeric(substr(total,1,3))) %>%
-    mutate(implied_total = round((implied_share*total),2))
+  ml <- toa_sports_odds(sport_key = 'baseball_mlb', 
+                        regions = 'us', 
+                        markets = 'h2h', 
+                        odds_format = 'american',
+                        date_format = 'iso') %>%
+    filter(bookmaker == 'FanDuel') %>%
+    separate(commence_time, into = c('date','game_time'), sep = 'T') %>%
+    mutate(game_time = str_sub(game_time,1,-2)) %>%
+    mutate(game_time = ymd_hms(paste(date, game_time))) %>%
+    mutate(game_time = date(game_time - hours(4))) %>%
+    filter(game_time == Sys.Date()) %>%
+    select(game_date = game_time, id, outcomes_name, ml = outcomes_price) 
   
-  sd_total <- sd(lines$implied_total)
-  avg_total <- mean(lines$implied_total)
-  
-  lines <- lines %>%
-    mutate(z_score = round((implied_total - avg_total)/sd_total,2))
+  implied <- ml %>%
+    inner_join(totals, by = c('game_date','id')) %>%
+    mutate(implied_share = case_when(ml < 0 ~ round((ml/(ml-100)),2),
+                                     TRUE ~ round((100/(ml + 100)),2))) %>%
+    mutate(implied_total = round(implied_share*total,2)) %>%
+    inner_join(team_abbreviations, by = c('outcomes_name' = 'team_full_name'))
   
 }
 
 
-#lines <- clean_totals(url)
+implied_totals <- clean_totals() %>%
+  select(team_abbreviation, implied_total)
 
-teams <- mlb_teams(season = 2023, sport_ids = c(1)) %>%
-  select(team_id, team_full_name, team_abbreviation)
+
 
 
 rosters_func <- function(team) {
@@ -418,17 +400,15 @@ pitcher_stats <- function() {
     select(Pitcher = pitcher, pitcher_id, Team = pitcher_team, Opponent = batter_team, agg_index, xba, xwoba, xslg, barrel_pa, barrel_pct, hard_hit, max_ev, mean_ev, sweet_spot, mean_ev_split, xba_split, xwoba_split, brl_split, iso_split, Rank) %>%
     inner_join(clean_pitchers, by = c('Pitcher' = 'pitcher_name', "Team" = 'pitcher_team', 'pitcher_id')) %>%
     mutate(salary_rank = round(rank(desc(pitcher_salary)),0)) %>%
-    mutate(value_rank = rank(desc(salary_rank/Rank))) %>%
     mutate(Price = dollar(as.numeric(pitcher_salary))) %>%
-    select(Pitcher, Price, Team, Opponent, agg_index, agg_index, salary_rank, xba, xwoba, xslg, barrel_pa, barrel_pct, hard_hit, max_ev, mean_ev, sweet_spot, mean_ev_split, xba_split, xwoba_split, brl_split, iso_split, Rank, value_rank) %>%
-    select(Pitcher, Team, Opponent, Price, agg_index, Rank, `Salary Rank` = salary_rank, `Value Rank` = value_rank) %>%
+    select(Pitcher, Price, Team, Opponent, agg_index, agg_index, salary_rank, xba, xwoba, xslg, barrel_pa, barrel_pct, hard_hit, max_ev, mean_ev, sweet_spot, mean_ev_split, xba_split, xwoba_split, brl_split, iso_split, Rank) %>%
+    inner_join(implied_totals, by = c('Opponent' = 'team_abbreviation')) %>%
+    mutate(implied_rank = rank(desc(implied_total))) %>%
+    mutate(value_rank = rank(desc((sum(salary_rank,implied_rank)/2)/Rank))) %>%
+    select(Pitcher, Team, Opponent, Price, agg_index, Rank, `Salary Rank` = salary_rank, `Implied Rank` = implied_rank, `Value Rank` = value_rank) %>%
     mutate(Rank = round(Rank,0)) %>%
-    arrange(Rank) 
+    arrange(Rank)
   
-  # %>%
-  #   gt() %>%
-  #   gt_color_rows(xba:Rank, palette = "RColorBrewer::Reds") %>%
-  #   tab_header(title = glue('Pitcher Averages for {date_of_game}'))
   
   return(pitcher_aggs)
 }
@@ -437,7 +417,7 @@ positions_list <- c('','C','1B','2B','3B','SS','OF')
 
 positions_table <- function(position_choice = c('C','1B','2B','3B','SS','OF'), difference = 25) {
   
-  # put a table next to it or something so we have both
+
   #position_choice = '2B'
   
   position_players <- whole_day_stats %>%
@@ -454,9 +434,6 @@ positions_table <- function(position_choice = c('C','1B','2B','3B','SS','OF'), d
     select(Batter = batter, Team = batter_team, position, Salary = batter_salary, Pitcher = pitcher, Opponent = pitcher_team, agg_index, Rank, `Salary Rank` = salary_rank, `Value Rank` = value_rank) %>%
     mutate(Salary = dollar(as.numeric(Salary))) %>%
   
-  # %>%
-  #   gt() %>%
-  #   gt_color_rows(agg_total:value, palette = "grDevices::blues9")
   
   
   
