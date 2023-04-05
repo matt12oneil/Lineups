@@ -393,8 +393,9 @@ pitcher_stats <- function() {
     mutate(salary_rank = round(rank(desc(pitcher_salary)),0)) %>%
     mutate(Price = dollar(as.numeric(pitcher_salary))) %>%
     select(Pitcher, Price, Team, Opponent, agg_index, agg_index, salary_rank, xba, xwoba, xslg, barrel_pa, barrel_pct, hard_hit, max_ev, mean_ev, sweet_spot, mean_ev_split, xba_split, xwoba_split, brl_split, iso_split, Rank, implied_rank) %>%
+    mutate(implied_rank = rank(desc(implied_rank))) %>%
     select(Pitcher, Team, Opponent, Price, agg_index, Rank, `Salary Rank` = salary_rank, `Opp. Implied Rank` = implied_rank) %>%
-    mutate(`Value Rank` = rank(desc((sum(`Salary Rank`,`Opp. Implied Rank`)/2)/Rank))) %>%
+    mutate(`Value Rank` = rank(((Rank + `Opp. Implied Rank` + (.5*`Salary Rank`)/3)))) %>%
     mutate(Rank = round(Rank,0)) %>%
     arrange(Rank)
   
@@ -419,7 +420,7 @@ positions_table <- function(position_choice = c('C','1B','2B','3B','SS','OF'), d
     select(batter, batter_team, position, batter_salary, pitcher, pitcher_team, agg_index, Rank, salary_rank, implied_rank, value_rank) %>%
     arrange(Rank) %>%
     mutate_if(is.numeric, round, 2) %>%
-    mutate(value = round(salary_rank/Rank,2)) %>%
+    mutate(value = round((Rank + implied_rank + (.25*salary_rank))/3,2)) %>%
     select(Batter = batter, Team = batter_team, position, Salary = batter_salary, Pitcher = pitcher, Opponent = pitcher_team, agg_index, Rank, `Salary Rank` = salary_rank, `Implied Team Rank` = implied_rank, `Value Rank` = value_rank) %>%
     mutate(Salary = dollar(as.numeric(Salary)))
   
