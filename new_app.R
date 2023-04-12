@@ -21,6 +21,7 @@
 #https://www.bettingpros.com/mlb/picks/prop-bets/
 #https://www.scoresandodds.com/mlb/props
 
+#classification of batters and hitters based on pitch mixes & stuff then view how each better performs against other classes
 
 
 
@@ -133,7 +134,7 @@ xstats <- function(type, game_season){
     leaderboard = "expected_statistics",
     year = game_season,
     abs = 1,
-    min_pa = 1,
+    min_pa = 'q',
     min_pitches = 1,
     min_field = "q",
     min_run = 0,
@@ -162,7 +163,7 @@ ev <- function(type, game_season){
     leaderboard = "exit_velocity_barrels",
     year = game_season,
     abs = 5,
-    min_pa = 1,
+    min_pa = 'q',
     min_pitches = 5,
     min_field = "q",
     min_run = 0,
