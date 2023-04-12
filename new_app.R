@@ -495,3 +495,58 @@ server <- function(input, output) {
 }
 shinyApp(ui = ui, server = server) 
 
+
+
+# pitcher_salary = 10000
+# 
+# proj <- whole_day_stats %>%
+#   #select(agg_index, batter_id, batter, batter_team, batter_salary, position) %>%
+#   separate_longer_delim(position,delim = '/') %>%
+#   mutate(c_1b = str_detect(position, 'C') | str_detect(position, '1B')) %>%
+#   mutate(second = str_detect(position, '2B')) %>%
+#   mutate(third = str_detect(position, '3B')) %>%
+#   mutate(short = str_detect(position, 'SS')) %>%
+#   mutate(of = str_detect(position, 'OF'))
+# 
+# n_players <- whole_day_stats %>%
+#   select(batter) %>%
+#   n_distinct()
+# 
+# n_teams <- whole_day_stats %>%
+#   select(batter_team) %>%
+#   n_distinct()
+# 
+# mat <- matrix(c(#proj$salary
+#   #,proj$agg_index
+#   as.vector(proj$agg_index)
+#   ,as.vector(proj$batter_salary)
+#   ,rep(1,nrow(proj))
+#   ,proj$c_1b
+#   ,proj$second
+#   ,proj$third
+#   ,proj$short
+#   ,proj$of
+#   #,proj$c_1b
+#   #,proj$second
+#   #,proj$third
+#   #,proj$short
+#   #,proj$of
+#   #,t(model.matrix(~ batter_team + 0, proj))
+#   #,t(model.matrix(~ batter + 0, proj))
+# ), ncol = nrow(proj), byrow = T)
+# 
+# constraint_rhs <- c(1600,25000,8,1,1,1,1,3)#,2,2,2,2,4)
+# 
+# constraint_direction <- c("<=","<=",'==', '>=','>=','>=','>=','>=')#, '<=','<=','<=','<=','<=')
+# 
+# obj <- as.vector(proj$agg_index)
+# 
+# output <- lp(direction = 'max', objective.in = obj, const.mat = mat, const.rhs = constraint_rhs, const.dir = constraint_direction, all.bin = T)
+# 
+# 
+# sol <- which(output$solution == 1)
+# proj[sol, ] 
+# 
+# proj[sol, ] %>%
+#   summarize(sum(batter_salary),sum(agg_index))
+
