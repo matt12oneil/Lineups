@@ -1,8 +1,3 @@
-#switch positions to reactable instead of GT
-#switch lineups to reactable instead of GT
-#potentially switch index and all batters pages to reactable instead of datatable
-#maximize the total agg in terms of dollars
-#add in runs total rank by team
 #add in strikeouts total by pitcher by sportsbooks
 #add in projected runs and total innings pitched by sportsbooks
 
@@ -97,7 +92,7 @@ clean_totals <- function() {
 implied_totals <- clean_totals() %>%
   select(team_abbreviation, implied_total) %>%
   mutate(implied_rank = round(rank(desc(implied_total)),0)) %>%
-  select(team_abbreviation, implied_rank)
+  select(team_abbreviation, implied_total, implied_rank)
 
 rosters_func <- function(team) {
   mlb_rosters(team_id = team, date = Sys.Date(), roster_type = 'active') %>%
@@ -327,10 +322,11 @@ whole_day_stats <- players %>%
          , iso_split = (batter_iso_split + pitcher_iso_split)/2 * park_factors) %>%
   mutate(agg_total = ((.5*xba) + (.5*xwoba) + (xslg) + (.25*barrel_pa) + (.25*barrel_pct) + (hard_hit) + (.25*max_ev) + (.25*mean_ev) + (sweet_spot) + (.5*mean_ev_split) + (.5*xba_split) + (.5*xwoba_split) + (.5*brl_split) + (iso_split))) %>%
   filter(!is.na(agg_total)) %>%
-  mutate(agg_index = round(agg_total/mean(agg_total)*100,2)) %>%
-  select(batter_id, batter = player_name, batter_team = team, batter_salary = salary, position, pitcher_id, pitcher = pitcher_name, pitcher_team = opponent, pitcher_salary, p_throws, batter_stand = stand, agg_index, xslg, xwoba, xba, barrel_pa, barrel_pct, hard_hit, mean_ev, max_ev, sweet_spot, mean_ev_split, xba_split, xwoba_split, brl_split, iso_split) %>%
+  select(batter_id, batter = player_name, batter_team = team, batter_salary = salary, position, pitcher_id, pitcher = pitcher_name, pitcher_team = opponent, pitcher_salary, p_throws, batter_stand = stand, agg_total, xslg, xwoba, xba, barrel_pa, barrel_pct, hard_hit, mean_ev, max_ev, sweet_spot, mean_ev_split, xba_split, xwoba_split, brl_split, iso_split) %>%
   filter(position != 'P') %>%
-  inner_join(implied_totals, by = c('batter_team' = 'team_abbreviation'))
+  inner_join(implied_totals, by = c('batter_team' = 'team_abbreviation')) %>%
+  mutate(agg_total = agg_total*(implied_total/10000)) %>%
+  mutate(agg_index = round(agg_total/mean(agg_total)*100,2))
 
 teams <- players %>%
   distinct(team) %>%
@@ -374,6 +370,7 @@ lineup_stats <- function(team_name){
   
   return(all_matchups)
 }
+  
 
 
 pitcher_stats <- function() {
@@ -402,6 +399,82 @@ pitcher_stats <- function() {
   
   
   return(pitcher_aggs)
+}
+
+pitcher_aggs <- pitcher_stats()
+
+generate_lineup <- function(n, pitcher_salary){
+  
+  
+  proj <- whole_day_stats %>%
+    select(agg_index, batter_id, batter, batter_team, batter_salary, position) %>%
+    mutate(multiple = runif(nrow(.),.925,1.075)) %>%
+    mutate(agg_index = agg_index*multiple) %>%
+    separate_longer_delim(position,delim = '/') %>%
+    #filter(!(batter == 'Rodolfo Castro' & position == '2B')) %>%
+    mutate(c_1b = str_detect(position, 'C') | str_detect(position, '1B')) %>%
+    mutate(second = str_detect(position, '2B')) %>%
+    mutate(third = str_detect(position, '3B')) %>%
+    mutate(short = str_detect(position, 'SS')) %>%
+    mutate(of = str_detect(position, 'OF')) %>%
+    mutate(lineup = n)
+  
+  
+  
+  mat <- matrix(c(#proj$salary
+    #,proj$agg_index
+    #as.vector(proj$agg_index)
+    as.vector(proj$batter_salary)
+    ,rep(1,nrow(proj))
+    ,proj$c_1b
+    ,proj$second
+    ,proj$third
+    ,proj$short
+    ,proj$of
+    ,t(model.matrix(~ batter_team + 0, proj))
+    #,t(model.matrix(~ batter_id + 0, proj))
+    #,t(model.matrix(~ batter_team + 0, proj))
+    #,t(model.matrix(~ batter + 0, proj))
+  ), ncol = nrow(proj), byrow = T)
+  
+  constraint_rhs <- c((35000-pitcher_salary),8,1,1,1,1,3,rep(3,length(unique(proj$batter_team))))#,rep(1,length(unique(proj$batter_id))))
+  
+  constraint_direction <- c("<=",'==', '>=','>=','>=','>=','>=', rep('<=',length(unique(proj$batter_team))))#, rep('<=',length(unique(proj$batter_id))))
+  
+  obj <- as.vector(proj$agg_index)
+  
+  output <- lp(direction = 'max', objective.in = obj, const.mat = mat, const.rhs = constraint_rhs, const.dir = constraint_direction, all.bin = T)
+  
+  results <- proj[which(output$solution == 1),]
+  
+  return(results)
+}
+
+return_optimized <- function(pitcher_name){
+  
+  
+  
+  p_sal <- pitcher_aggs %>%
+    filter(Pitcher == pitcher_name) %>%
+    select(Price) %>% 
+    mutate(Price = parse_number(Price))
+  
+  sim_lu <- map2_dfr(c(1:100), p_sal$Price, generate_lineup)
+
+  legals <- sim_lu %>%
+    group_by(lineup) %>%
+    summarize(total_players = n_distinct(batter_id)) %>%
+    inner_join(sim_lu, by = c('lineup')) %>%
+    group_by(lineup, total_players, batter_team) %>%
+    summarize(players_on_team = n_distinct()) %>%
+    filter(total_players == 8 & players_on_team <= 4) %>%
+    inner_join(sim_lu, by = c('lineup')) %>%
+    select(batter, batter_team, position, lineup) %>%
+    arrange(lineup, position) %>%
+    head(80)
+  
+  return(legals)
+  
 }
 
 positions_list <- c('','C','1B','2B','3B','SS','OF')
@@ -456,6 +529,12 @@ ui = fluidPage(
       ),
       gt_output(outputId = "team1")),
       
+      tabPanel("Optimized Lineups", selectInput("pitcher",
+                                           choices =  pitcher_aggs$Pitcher,
+                                           label = 'Select a Pitcher'
+      ),
+      DT::dataTableOutput("optimized")),
+      
       
       tabPanel("Pitchers", 
                DT::dataTableOutput("pitchers")
@@ -477,6 +556,10 @@ server <- function(input, output) {
                                    autoWidth = TRUE,
                                    columnDefs = list(list(width = '10px',className = 'dt-center', targets = "_all")))
   )
+  output$optimized <- DT::renderDataTable(
+    return_optimized(pitcher_name = input$pitcher), options = list(pageLength = 8, 
+                                                                                        autoWidth = TRUE,
+                                                                                        columnDefs = list(list(width = '10px',className = 'dt-center', targets = "_all"))))
   output$pitchers <- DT::renderDataTable(
     pitcher_stats(), options = list(pageLength = 30,
                                     autoWidth = TRUE,
@@ -495,58 +578,4 @@ server <- function(input, output) {
 }
 shinyApp(ui = ui, server = server) 
 
-
-
-# pitcher_salary = 10000
-# 
-# proj <- whole_day_stats %>%
-#   #select(agg_index, batter_id, batter, batter_team, batter_salary, position) %>%
-#   separate_longer_delim(position,delim = '/') %>%
-#   mutate(c_1b = str_detect(position, 'C') | str_detect(position, '1B')) %>%
-#   mutate(second = str_detect(position, '2B')) %>%
-#   mutate(third = str_detect(position, '3B')) %>%
-#   mutate(short = str_detect(position, 'SS')) %>%
-#   mutate(of = str_detect(position, 'OF'))
-# 
-# n_players <- whole_day_stats %>%
-#   select(batter) %>%
-#   n_distinct()
-# 
-# n_teams <- whole_day_stats %>%
-#   select(batter_team) %>%
-#   n_distinct()
-# 
-# mat <- matrix(c(#proj$salary
-#   #,proj$agg_index
-#   as.vector(proj$agg_index)
-#   ,as.vector(proj$batter_salary)
-#   ,rep(1,nrow(proj))
-#   ,proj$c_1b
-#   ,proj$second
-#   ,proj$third
-#   ,proj$short
-#   ,proj$of
-#   #,proj$c_1b
-#   #,proj$second
-#   #,proj$third
-#   #,proj$short
-#   #,proj$of
-#   #,t(model.matrix(~ batter_team + 0, proj))
-#   #,t(model.matrix(~ batter + 0, proj))
-# ), ncol = nrow(proj), byrow = T)
-# 
-# constraint_rhs <- c(1600,25000,8,1,1,1,1,3)#,2,2,2,2,4)
-# 
-# constraint_direction <- c("<=","<=",'==', '>=','>=','>=','>=','>=')#, '<=','<=','<=','<=','<=')
-# 
-# obj <- as.vector(proj$agg_index)
-# 
-# output <- lp(direction = 'max', objective.in = obj, const.mat = mat, const.rhs = constraint_rhs, const.dir = constraint_direction, all.bin = T)
-# 
-# 
-# sol <- which(output$solution == 1)
-# proj[sol, ] 
-# 
-# proj[sol, ] %>%
-#   summarize(sum(batter_salary),sum(agg_index))
 
