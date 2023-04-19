@@ -408,7 +408,7 @@ generate_lineup <- function(n, pitcher_salary){
   
   proj <- whole_day_stats %>%
     select(agg_index, batter_id, batter, batter_team, batter_salary, position) %>%
-    mutate(multiple = runif(nrow(.),.925,1.075)) %>%
+    mutate(multiple = runif(nrow(.),.8,1.2)) %>%
     mutate(agg_index = agg_index*multiple) %>%
     separate_longer_delim(position,delim = '/') %>%
     #filter(!(batter == 'Rodolfo Castro' & position == '2B')) %>%
@@ -468,6 +468,8 @@ return_optimized <- function(pitcher_name){
     group_by(lineup, total_players, batter_team) %>%
     summarize(players_on_team = n_distinct()) %>%
     filter(total_players == 8 & players_on_team <= 4) %>%
+    select(lineup) %>%
+    distinct() %>%
     inner_join(sim_lu, by = c('lineup')) %>%
     select(batter, batter_team, position, lineup) %>%
     arrange(lineup, position) %>%
