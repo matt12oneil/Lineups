@@ -464,10 +464,15 @@ return_optimized <- function(pitcher_name){
   legals <- sim_lu %>%
     group_by(lineup) %>%
     summarize(total_players = n_distinct(batter_id)) %>%
+    filter(total_players == 8)%>%
     inner_join(sim_lu, by = c('lineup')) %>%
-    group_by(lineup, total_players, batter_team) %>%
-    summarize(players_on_team = n_distinct()) %>%
-    filter(total_players == 8 & players_on_team <= 4) %>%
+    group_by(lineup, batter_team) %>%
+    summarize(players_on_team = n_distinct(batter_id)) %>%
+    ungroup() %>%
+    group_by(lineup) %>%
+    summarize(max_players = max(players_on_team)) %>%
+    ungroup() %>%
+    filter(max_players <= 4) %>%
     select(lineup) %>%
     distinct() %>%
     inner_join(sim_lu, by = c('lineup')) %>%
