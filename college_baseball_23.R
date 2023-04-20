@@ -43,7 +43,6 @@ ryan_teams <- all_teams %>%
 all_teams <- matt_teams %>%
   bind_rows(ryan_teams)
 
-ncaa_schedule_info(team_id = 169, year = 2023)
 
 #baseballr::load_ncaa_baseball_schedule()
 
