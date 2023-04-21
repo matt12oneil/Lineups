@@ -497,7 +497,7 @@ positions_list <- c('','C','1B','2B','3B','SS','OF')
 positions_table <- function(position_choice = c('C','1B','2B','3B','SS','OF'), difference = 25) {
   
 
-  #position_choice = '2B'
+
   
   position_players <- whole_day_stats %>%
     filter(grepl(paste(position_choice,collapse="|"), position)) %>%
