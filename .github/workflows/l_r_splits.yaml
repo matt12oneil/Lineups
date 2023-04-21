@@ -37,6 +37,7 @@ jobs:
             any::knitr 
             any::baseballr
             any::tidytable
+            any::tidyverse
       - name: Execute Script
         # executes the RScript stored in the file
         # 01-monitoring-quarto-repos/script.R
