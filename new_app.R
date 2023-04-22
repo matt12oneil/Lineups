@@ -406,6 +406,7 @@ pitcher_aggs <- pitcher_stats()
 generate_lineup <- function(n, pitcher_salary){
   
   
+  
   proj <- whole_day_stats %>%
     select(agg_index, batter_id, batter, batter_team, batter_salary, position) %>%
     mutate(multiple = runif(nrow(.),.8,1.2)) %>%
@@ -547,7 +548,10 @@ ui = fluidPage(
       tabPanel("Optimized Lineups", selectInput("pitcher",
                                            choices =  pitcher_aggs$Pitcher,
                                            label = 'Select a Pitcher'
-      ),
+      ), selectInput("excluded_list",
+                      choices =  player_stats$batter,
+                      multiple = TRUE,
+                      label = 'Select Batters to Exclude'),
       DT::dataTableOutput("optimized")),
       
       
