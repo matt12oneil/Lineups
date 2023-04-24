@@ -408,6 +408,7 @@ generate_lineup <- function(n, pitcher_salary){
   
   
   proj <- whole_day_stats %>%
+    #filter(batter != 'Nick Gordon' & batter != 'Brandon Belt' & batter != 'Travis Jankowski' & batter != 'Trevor Larnach') %>%
     select(agg_index, batter_id, batter, batter_team, batter_salary, position) %>%
     mutate(multiple = runif(nrow(.),.8,1.2)) %>%
     mutate(agg_index = agg_index*multiple) %>%
