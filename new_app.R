@@ -22,6 +22,9 @@
 
 pacman::p_load(shiny,shiny,tidyverse,dplyr,formattable,gtExtras,rsconnect,baseballr,retrosheet,gt,stringr,janitor,DT,furrr,data.table,readxl,scales,shinyWidgets,lubridate,ggrepel,rvest,XML,httr,jsonlite,lpSolve,tidytable, glue,oddsapiR)
 
+devtools::install_github("colin-fraser/tidyLP")
+library(tidyLP)
+
 
 
 #only take balls put in play
@@ -410,46 +413,30 @@ generate_lineup <- function(n, pitcher_salary){
   proj <- whole_day_stats %>%
     #filter(batter != 'Nick Gordon' & batter != 'Brandon Belt' & batter != 'Travis Jankowski' & batter != 'Trevor Larnach') %>%
     select(agg_index, batter_id, batter, batter_team, batter_salary, position) %>%
-    mutate(multiple = runif(nrow(.),.8,1.2)) %>%
-    mutate(agg_index = agg_index*multiple) %>%
+    mutate(multiple = runif(nrow(.),.9,1.1)) %>%
+    mutate(agg_index = round(agg_index*multiple),2) %>%
     separate_longer_delim(position,delim = '/') %>%
-    #filter(!(batter == 'Rodolfo Castro' & position == '2B')) %>%
-    mutate(c_1b = str_detect(position, 'C') | str_detect(position, '1B')) %>%
-    mutate(second = str_detect(position, '2B')) %>%
-    mutate(third = str_detect(position, '3B')) %>%
-    mutate(short = str_detect(position, 'SS')) %>%
-    mutate(of = str_detect(position, 'OF')) %>%
     mutate(lineup = n)
   
+  team <- proj %>%
+    tidy_lp(
+      agg_index,
+      batter_salary ~ leq(35000-pitcher_salary),
+      all_variables() ~ eq(8),
+      (position == '1B' | position == 'C') ~ geq(1),
+      (position == '2B') ~ geq(1),
+      (position == 'SS') ~ geq(1),
+      (position == '3B') ~ geq(1),
+      (position == 'OF') ~ geq(3),
+      categorical_constraint(batter_team) ~ leq(3),
+      .all_bin = TRUE
+    ) %>%
+    lp_solve() %>%
+    bind_solution(filter_nonzero = TRUE) %>%
+    select(batter_id, batter, batter_team, position, agg_index, batter_salary, lineup)
   
   
-  mat <- matrix(c(#proj$salary
-    #,proj$agg_index
-    #as.vector(proj$agg_index)
-    as.vector(proj$batter_salary)
-    ,rep(1,nrow(proj))
-    ,proj$c_1b
-    ,proj$second
-    ,proj$third
-    ,proj$short
-    ,proj$of
-    ,t(model.matrix(~ batter_team + 0, proj))
-    #,t(model.matrix(~ batter_id + 0, proj))
-    #,t(model.matrix(~ batter_team + 0, proj))
-    #,t(model.matrix(~ batter + 0, proj))
-  ), ncol = nrow(proj), byrow = T)
-  
-  constraint_rhs <- c((35000-pitcher_salary),8,1,1,1,1,3,rep(3,length(unique(proj$batter_team))))#,rep(1,length(unique(proj$batter_id))))
-  
-  constraint_direction <- c("<=",'==', '>=','>=','>=','>=','>=', rep('<=',length(unique(proj$batter_team))))#, rep('<=',length(unique(proj$batter_id))))
-  
-  obj <- as.vector(proj$agg_index)
-  
-  output <- lp(direction = 'max', objective.in = obj, const.mat = mat, const.rhs = constraint_rhs, const.dir = constraint_direction, all.bin = T)
-  
-  results <- proj[which(output$solution == 1),]
-  
-  return(results)
+  return(team)
 }
 
 return_optimized <- function(pitcher_name){
@@ -466,19 +453,10 @@ return_optimized <- function(pitcher_name){
   legals <- sim_lu %>%
     group_by(lineup) %>%
     summarize(total_players = n_distinct(batter_id)) %>%
-    filter(total_players == 8)%>%
-    inner_join(sim_lu, by = c('lineup')) %>%
-    group_by(lineup, batter_team) %>%
-    summarize(players_on_team = n_distinct(batter_id)) %>%
+    filter(total_players == 8) %>%
     ungroup() %>%
-    group_by(lineup) %>%
-    summarize(max_players = max(players_on_team)) %>%
-    ungroup() %>%
-    filter(max_players <= 4) %>%
-    select(lineup) %>%
-    distinct() %>%
     inner_join(sim_lu, by = c('lineup')) %>%
-    select(batter, batter_team, position, lineup) %>%
+    select(batter, batter_team, position, agg_index, batter_salary, lineup) %>%
     arrange(lineup, position) %>%
     mutate(pos_num = case_when(position == 'C' ~ 2,
                                position == '1B' ~ 3,
@@ -487,7 +465,7 @@ return_optimized <- function(pitcher_name){
                                position == 'SS' ~ 6,
                                position == 'OF' ~ 7)) %>%
     arrange(lineup, pos_num) %>%
-    select(batter, batter_team, position) %>%
+    select(batter, batter_team, position, agg_index, batter_salary) %>%
     head(120)
   
   return(legals)
