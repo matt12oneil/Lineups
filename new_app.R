@@ -410,8 +410,7 @@ generate_lineup <- function(n, pitcher_salary){
   
   
 
-  salary_left <- as.data.frame(35000 - pitcher_salary) %>%
-    select(sal = `35000 - pitcher_salary`)
+  salary_left <- 35000 - pitcher_salary
 
    proj <- whole_day_stats %>%
      filter(batter != 'Nick Gordon' & batter != 'Donovan Solano' & batter != 'Luis Rengifo') %>%
@@ -419,13 +418,12 @@ generate_lineup <- function(n, pitcher_salary){
      mutate(multiple = runif(nrow(.),.9,1.1)) %>%
      mutate(agg_index = round(agg_index*multiple),2) %>%
      separate_longer_delim(position,delim = '/') %>%
-     mutate(lineup = n)
+     mutate(lineup = n, salary_left = (35000-pitcher_salary))
   
-   team <- proj %>%
-     tidy_lp(
-       agg_index,
-       batter_salary ~ leq(salary_left$sal),
-       #batter_salary ~ leq(salary_left),
+   team <- tidy_lp(.data = proj,
+       .objective = agg_index,
+       .direction = 'max',
+       batter_salary ~ leq(salary_left),
        all_variables() ~ eq(8),
        (position == '1B' | position == 'C') ~ geq(1),
        (position == '2B') ~ geq(1),
@@ -440,8 +438,10 @@ generate_lineup <- function(n, pitcher_salary){
      select(batter_id, batter, batter_team, position, agg_index, batter_salary, lineup)
   
   
-  return(team)
+
 }
+
+
 
 return_optimized <- function(pitcher_name){
   
@@ -452,7 +452,7 @@ return_optimized <- function(pitcher_name){
     select(Price) %>% 
     mutate(Price = parse_number(Price))
   
-  sim_lu <- map2_dfr(c(1:100), 11200, generate_lineup)
+  sim_lu <- map2_dfr(c(1:50), p_sal$Price, generate_lineup)
   
 
   legals <- sim_lu %>%
@@ -474,7 +474,7 @@ return_optimized <- function(pitcher_name){
     mutate(Salary = scales::dollar(Salary)) %>%
     head(120)
   
-  return(legals)
+
   
 }
 
