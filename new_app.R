@@ -409,31 +409,35 @@ pitcher_aggs <- pitcher_stats()
 generate_lineup <- function(n, pitcher_salary){
   
   
+
+  salary_left <- as.data.frame(35000 - pitcher_salary) %>%
+    select(sal = `35000 - pitcher_salary`)
+
+   proj <- whole_day_stats %>%
+     filter(batter != 'Nick Gordon' & batter != 'Donovan Solano' & batter != 'Luis Rengifo') %>%
+     select(agg_index, batter_id, batter, batter_team, batter_salary, position) %>%
+     mutate(multiple = runif(nrow(.),.9,1.1)) %>%
+     mutate(agg_index = round(agg_index*multiple),2) %>%
+     separate_longer_delim(position,delim = '/') %>%
+     mutate(lineup = n)
   
-  proj <- whole_day_stats %>%
-    #filter(batter != 'Nick Gordon' & batter != 'Brandon Belt' & batter != 'Travis Jankowski' & batter != 'Trevor Larnach') %>%
-    select(agg_index, batter_id, batter, batter_team, batter_salary, position) %>%
-    mutate(multiple = runif(nrow(.),.9,1.1)) %>%
-    mutate(agg_index = round(agg_index*multiple),2) %>%
-    separate_longer_delim(position,delim = '/') %>%
-    mutate(lineup = n)
-  
-  team <- proj %>%
-    tidy_lp(
-      agg_index,
-      batter_salary ~ leq(35000-pitcher_salary),
-      all_variables() ~ eq(8),
-      (position == '1B' | position == 'C') ~ geq(1),
-      (position == '2B') ~ geq(1),
-      (position == 'SS') ~ geq(1),
-      (position == '3B') ~ geq(1),
-      (position == 'OF') ~ geq(3),
-      categorical_constraint(batter_team) ~ leq(3),
-      .all_bin = TRUE
-    ) %>%
-    lp_solve() %>%
-    bind_solution(filter_nonzero = TRUE) %>%
-    select(batter_id, batter, batter_team, position, agg_index, batter_salary, lineup)
+   team <- proj %>%
+     tidy_lp(
+       agg_index,
+       batter_salary ~ leq(salary_left$sal),
+       #batter_salary ~ leq(salary_left),
+       all_variables() ~ eq(8),
+       (position == '1B' | position == 'C') ~ geq(1),
+       (position == '2B') ~ geq(1),
+       (position == 'SS') ~ geq(1),
+       (position == '3B') ~ geq(1),
+       (position == 'OF') ~ geq(3),
+       categorical_constraint(batter_team) ~ leq(3),
+       .all_bin = TRUE
+     ) %>%
+     lp_solve() %>%
+     bind_solution(filter_nonzero = TRUE) %>%
+     select(batter_id, batter, batter_team, position, agg_index, batter_salary, lineup)
   
   
   return(team)
@@ -448,7 +452,8 @@ return_optimized <- function(pitcher_name){
     select(Price) %>% 
     mutate(Price = parse_number(Price))
   
-  sim_lu <- map2_dfr(c(1:100), p_sal$Price, generate_lineup)
+  sim_lu <- map2_dfr(c(1:100), 11200, generate_lineup)
+  
 
   legals <- sim_lu %>%
     group_by(lineup) %>%
@@ -465,12 +470,15 @@ return_optimized <- function(pitcher_name){
                                position == 'SS' ~ 6,
                                position == 'OF' ~ 7)) %>%
     arrange(lineup, pos_num) %>%
-    select(batter, batter_team, position, agg_index, batter_salary) %>%
+    select(Batter = batter, Team = batter_team, Position = position, Index = agg_index, Salary = batter_salary) %>%
+    mutate(Salary = scales::dollar(Salary)) %>%
     head(120)
   
   return(legals)
   
 }
+
+
 
 positions_list <- c('','C','1B','2B','3B','SS','OF')
 
