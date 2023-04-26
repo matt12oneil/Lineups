@@ -413,7 +413,7 @@ generate_lineup <- function(n, pitcher_salary){
   salary_left <- 35000 - pitcher_salary
 
    proj <- whole_day_stats %>%
-     filter(batter != 'Nick Gordon' & batter != 'Donovan Solano' & batter != 'Luis Rengifo') %>%
+     #filter(batter != 'Nick Gordon' & batter != 'Donovan Solano' & batter != 'Luis Rengifo') %>%
      select(agg_index, batter_id, batter, batter_team, batter_salary, position) %>%
      mutate(multiple = runif(nrow(.),.9,1.1)) %>%
      mutate(agg_index = round(agg_index*multiple),2) %>%
