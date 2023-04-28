@@ -413,7 +413,7 @@ generate_lineup <- function(n, pitcher_salary){
   salary_left <- 35000 - pitcher_salary
 
    proj <- whole_day_stats %>%
-     filter(batter != 'Chris Taylor' & batter != 'Daniel Vogelbach') %>%
+     filter(batter != 'Eduardo Escobar' & batter != 'LaMonte Wade Jr.' & batter != 'David Villar' & batter_team != 'SF' & batter != 'Luis Rengifo') %>%
      select(agg_index, batter_id, batter, batter_team, batter_salary, position) %>%
      mutate(multiple = runif(nrow(.),.9,1.1)) %>%
      mutate(agg_index = round(agg_index*multiple),2) %>%
