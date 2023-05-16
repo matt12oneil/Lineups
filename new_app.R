@@ -16,7 +16,11 @@
 #https://www.bettingpros.com/mlb/picks/prop-bets/
 #https://www.scoresandodds.com/mlb/props
 
-#classification of batters and hitters based on pitch mixes & stuff then view how each better performs against other classes
+#classification of batters and hitters based on pitch mixes & stuff then view how each better performs against other classes, get lines and expected statistics against certain pitches potentially
+
+#looks at barrels, ev, expected statistics, etc. and see where they wind up with fantasy points (excluding stolen bases, could probably use speed for that) with a correlation/regression model
+#join to fanduel data to get the full slate of stats
+
 
 
 
@@ -282,7 +286,7 @@ salary <- read_csv('https://raw.githubusercontent.com/matt12oneil/Lineups/master
   filter(is.na(injury_indicator)) %>%
   mutate(nickname = ifelse(nickname == 'Kike Hernandez' & team == 'BOS','Kiké Hernandez', nickname)) %>%
   mutate(nickname = ifelse(nickname == 'Ji Man Choi','Ji-Man Choi', nickname)) %>%
-  inner_join(rosters, by = c('nickname' = 'player_name')) %>%
+  inner_join(rosters, by = c('nickname' = 'player_name', 'team' = 'player_team') ) %>%
   select(key_mlbam = player, id, position, nickname, salary, game, opponent, injury_indicator, injury_details, probable_pitcher, batting_order, roster_position, team, opponent) %>%
   inner_join(batters_statcast, by = c('key_mlbam' = 'player')) %>%
   filter(type == 'batter')%>%
@@ -383,7 +387,7 @@ pitcher_stats <- function() {
     distinct()
     
   pitcher_aggs <- whole_day_stats %>%
-    group_by(pitcher, pitcher_id, pitcher_team, batter_team, pitcher_team, implied_rank) %>%
+    group_by(pitcher, pitcher_id, pitcher_team, batter_team, implied_rank) %>%
     summarize(agg_index = mean(agg_index), barrel_pa = mean(barrel_pa), barrel_pct = mean(barrel_pct), hard_hit = mean(hard_hit), max_ev = mean(max_ev), mean_ev = mean(mean_ev), sweet_spot = mean(sweet_spot), xba = mean(xba), xwoba = mean(xwoba), xslg = mean(xslg), mean_ev_split = mean(mean_ev_split), xba_split = mean(xba_split), xwoba_split = mean(xwoba_split), brl_split = mean(brl_split), iso_split = mean(iso_split)) %>%
     ungroup() %>%
     mutate_if(is.numeric, round, 2) %>%
@@ -413,7 +417,7 @@ generate_lineup <- function(n, pitcher_salary){
   salary_left <- 35000 - pitcher_salary
 
    proj <- whole_day_stats %>%
-     filter(batter != 'Eduardo Escobar' & batter != 'LaMonte Wade Jr.' & batter != 'David Villar' & batter_team != 'SF' & batter != 'Luis Rengifo') %>%
+     filter(batter != 'Luke Raley' & batter != 'Will Brennan' & batter != 'Sam Hilliard' & batter != 'Jason Heyward') %>%
      select(agg_index, batter_id, batter, batter_team, batter_salary, position) %>%
      mutate(multiple = runif(nrow(.),.9,1.1)) %>%
      mutate(agg_index = round(agg_index*multiple),2) %>%
@@ -452,7 +456,7 @@ return_optimized <- function(pitcher_name){
     select(Price) %>% 
     mutate(Price = parse_number(Price))
   
-  sim_lu <- map2_dfr(c(1:50), p_sal$Price, generate_lineup)
+  sim_lu <- map2_dfr(c(1:15), p_sal$Price, generate_lineup)
   
 
   legals <- sim_lu %>%
